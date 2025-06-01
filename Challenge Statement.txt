@@ -1,0 +1,36 @@
+CEN3031 Summer 2025 Challenge Statement
+Section 16799
+Lead TA: Tomisin Obajemu & Mansi Pai
+University students face a unique set of challenges and opportunities as they navigate academic
+responsibilities, social connections, personal development, and future planning. For this project,
+your task is to design a software application that supports university students in a meaningful and
+practical way. This could involve enhancing academic performance, improving mental or
+physical well-being, fostering peer connections, helping with career preparation, or addressing
+common pain points like time management, resource access, or financial stress. Your solution
+should be guided by a clear understanding of the specific needs, habits, and pressures faced by
+students in a university environment.
+The application you develop should provide interactive features that deliver real value to
+students’ lives. You can create something that will be of use to university students generically or
+design something that caters to the needs of a specific sub-group. Your solution must go beyond
+offering static information or replicating existing systems; a simple landing page or a visual
+representation of a database will not be sufficient. Think carefully about what success and
+support mean in the context of student life and design a solution that is not only functional, but
+also engaging and sustainable for real-world use.
+While this system is not required to be developed to be accessed via the web, it must be able to
+be run on multiple different machines while accessing a central database (you will run a database
+locally for testing and development, but it should function as if you were connecting to a
+database on a central server).
+Course Specifications:
+● Implements user authentication with at least two distinct user types (e.g., administrator
+and member)
+● Implements a dynamic database of user and item data
+● Implements one or more “operations” involving some form of frontend-backend-database
+communication
+Course Expectations:
+● Databases can use any existing dataset or have dummy data. Databases using datasets
+should have at least 100 items. There can be exceptions based on the specific project.
+● New user creation/registration should be available
+● UI design should contain elements commonly found or expected such as a user profile,
+login, logout.
+● Consideration for design aesthetics
+● System should be dynamic and responsive
