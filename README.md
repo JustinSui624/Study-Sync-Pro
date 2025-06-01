@@ -8,6 +8,7 @@ Justin Sui,
 Yeshua Colon,
 Luis Borruel,
 Mason Bush
-
+# Configuration Management
+Trello: https://trello.com/invite/b/683c8be760d394c9922e5183/ATTIb493c9b5b26e635391e89151552ad3e4928E9D3B/project-board
 # About
 
