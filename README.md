@@ -1,6 +1,7 @@
 # CEN3031-S16799-Group-4
 CEN3031 S16799 Group 4
-
+# License
+Study-Sync-Pro use the Apache License 2.0 (https://github.com/JustinSui624/Study-Sync-Pro/blob/main/LICENSE)
 # Team Name:
 Study Group Task Force
 # Team Members: 
