@@ -6,5 +6,5 @@ CEN3031 S16799 Group 4
 Justin Sui,
 Yeshua Colon,
 Luis Borruel,
-Mason Bush,
+Mason Bush
 
