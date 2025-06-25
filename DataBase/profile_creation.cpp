@@ -24,8 +24,8 @@ int main() {
 
     try {
         sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
-        std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "your_username", "your_password"));
-        conn->setSchema("your_database_name");
+        std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "root", "sun1day"));
+        conn->setSchema("@localhost");
 
         std::unique_ptr<sql::PreparedStatement> stmt(
             conn->prepareStatement("INSERT INTO Profile (Name, GradYear, CurrentClasses) VALUES (?, ?, ?)")
