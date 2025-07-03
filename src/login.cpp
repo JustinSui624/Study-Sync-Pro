@@ -12,14 +12,13 @@ int main() {
     std::cout << "Username: ";
     std::getline(std::cin, username);
     std::cout << "Password: ";
-    std::getline(std::cin, password); // For real use, use a hidden input
+    std::getline(std::cin, password);
 
     try {
         sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
         std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "your_username", "your_password"));
         conn->setSchema("your_database_name");
 
-        // Prepare login check
         std::unique_ptr<sql::PreparedStatement> stmt(
             conn->prepareStatement("SELECT u.ProfileID, p.Name, p.GradYear, p.CurrentClasses "
                                    "FROM UserLogin u "
