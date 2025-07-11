@@ -11,7 +11,7 @@ int main() {
         sql::Connection* conn;
 
         driver = sql::mysql::get_mysql_driver_instance();
-        conn = driver->connect("tcp://127.0.0.1:3306", "root", "sun1day");
+        conn = driver->connect("tcp://127.0.0.1:3306", "root", "1234");
 
         conn->setSchema("@localhost");
 
