@@ -1,60 +1,61 @@
 #include "TextBox.h"
-
+#include <iostream>
+using namespace std;
 
 TextBox::TextBox(float x, float y, float width, float height, const std::string& labelText, sf::Font& font)
 {
+
     // Setup the box
-    box.setSize(sf::Vector2f(width, height));
-    box.setPosition(x, y);
-    box.setFillColor(sf::Color(50, 50, 50));
-    box.setOutlineThickness(2);
-    box.setOutlineColor(sf::Color::White);
+    this->box.setSize(sf::Vector2f(width, height));
+    this->box.setPosition(x, y);
+    this->box.setFillColor(sf::Color(50, 50, 50));
+    this->box.setOutlineThickness(2);
+    this->box.setOutlineColor(sf::Color::White);
         
     // Setup the label
-    label.setFont(font);
-    label.setString(labelText);
-    label.setCharacterSize(16);
-    label.setFillColor(sf::Color::White);
-    label.setPosition(x, y - 25);
+    this->label.setFont(font);
+    this->label.setString(labelText);
+    this->label.setCharacterSize(16);
+    this->label.setFillColor(sf::Color::White);
+    this->label.setPosition(x, y - 25);
         
     // Setup the text
-    text.setFont(font);
-    text.setCharacterSize(16);
-    text.setFillColor(sf::Color::White);
-    text.setPosition(x + 5, y + 5);
+    this->text.setFont(font);
+    this->text.setCharacterSize(16);
+    this->text.setFillColor(sf::Color::White);
+    this->text.setPosition(x + 5, y + 5);
         
-    isActive = false;
-    showCursor = true;
-    content = "";
+    this->isActive = false;
+    this->showCursor = true;
+    this->content = "";
 }
 void TextBox::handleEvent(const sf::Event& event) {
     if (event.type == sf::Event::MouseButtonPressed) {
-        sf::Vector2i mousePos = sf::Mouse::getPosition();
+        sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
         sf::FloatRect boxBounds = box.getGlobalBounds();
         
         // Check if clicked inside the text box
-        if (boxBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            isActive = true;
-            box.setOutlineColor(sf::Color::Blue);
+        if (boxBounds.contains(mousePos)) {
+            this->isActive = true;
+            this->box.setOutlineColor(sf::Color::Blue);
         } else {
-            isActive = false;
-            box.setOutlineColor(sf::Color::White);
+            this->isActive = false;
+            this->box.setOutlineColor(sf::Color::White);
         }
     }
     
-    if (isActive && event.type == sf::Event::TextEntered) {
+    if (this->isActive && event.type == sf::Event::TextEntered) {
         if (event.text.unicode == 8) { // Backspace
-            if (!content.empty()) {
-                content.pop_back();
+            if (!this->content.empty()) {
+                this->content.pop_back();
             }
         } else if (event.text.unicode >= 32 && event.text.unicode < 127) { // Printable characters
-            content += static_cast<char>(event.text.unicode);
+            this->content += static_cast<char>(event.text.unicode);
         }
         
         updateDisplayText();
     }
 }
-
 void TextBox::update() {
     // Cursor blinking
     if (cursorClock.getElapsedTime().asMilliseconds() > 500) {
@@ -62,17 +63,17 @@ void TextBox::update() {
         cursorClock.restart();
     }
     
-    if (isActive) {
+    if (this->isActive) {
         updateDisplayText();
     }
 }
 
 void TextBox::updateDisplayText() {
     std::string displayText = content;
-    if (isActive && showCursor) {
+    if (this->isActive && this->showCursor) {
         displayText += "|";
     }
-    text.setString(displayText);
+    this->text.setString(displayText);
 }
 
 void TextBox::draw(sf::RenderWindow& window) {
@@ -86,6 +87,6 @@ std::string TextBox::getContent() const {
 }
 
 void TextBox::setActive(bool active) {
-    isActive = active;
+    this->isActive = active;
     box.setOutlineColor(active ? sf::Color::Blue : sf::Color::White);
 }

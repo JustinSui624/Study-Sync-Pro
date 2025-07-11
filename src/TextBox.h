@@ -2,6 +2,8 @@
 #define TEXTBOX_H
 
 #include <SFML/Graphics.hpp>
+#include <string>
+#include <iostream>
 
 class TextBox {
 private:
