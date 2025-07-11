@@ -24,7 +24,7 @@ int main() {
 
     try {
         sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
-        std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "root", "sun1day"));
+        std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "root", "1234"));
         conn->setSchema("@localhost");
 
         std::unique_ptr<sql::PreparedStatement> stmt(
