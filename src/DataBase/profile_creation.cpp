@@ -5,6 +5,32 @@
 #include <cppconn/resultset.h>
 #include <cppconn/exception.h>
 #include <sstream>
+#include <regex>
+#include <fstream>
+
+namespace SecurityCheck {
+    bool isValidUsername(const std::string& username) {
+        if (username.find("'") != std::string::npos ||
+            username.find("\"") != std::string::npos ||
+            username.find(";") != std::string::npos ||
+            username.find("--") != std::string::npos) {
+            return false;
+        }
+        return username.length() >= 3 && username.length() <= 20;
+    }
+    
+    bool isValidPassword(const std::string& password) {
+        return password.length() >= 8;
+    }
+    
+    void logEvent(const std::string& event) {
+        std::ofstream log("security_profile.log", std::ios::app);
+        if (log.is_open()) {
+            log << event << std::endl;
+            log.close();
+        }
+    }
+}
 
 int main() {
     std::string name, classes, username, password;
@@ -22,10 +48,35 @@ int main() {
     std::cout << "Choose a password: ";
     std::getline(std::cin, password);
 
+    if (!SecurityCheck::isValidUsername(username)) {
+        std::cerr << "Invalid username. Please avoid special characters." << std::endl;
+        SecurityCheck::logEvent("Invalid username attempt: " + username);
+        return 1;
+    }
+    
+    if (!SecurityCheck::isValidPassword(password)) {
+        std::cerr << "Password must be at least 8 characters." << std::endl;
+        SecurityCheck::logEvent("Weak password attempt");
+        return 1;
+    }
+
     try {
         sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
+        
         std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "root", "1234"));
         conn->setSchema("@localhost");
+
+        std::unique_ptr<sql::PreparedStatement> checkStmt(
+            conn->prepareStatement("SELECT COUNT(*) as count FROM UserLogin WHERE Username = ?")
+        );
+        checkStmt->setString(1, username);
+        std::unique_ptr<sql::ResultSet> checkRes(checkStmt->executeQuery());
+        
+        if (checkRes->next() && checkRes->getInt("count") > 0) {
+            std::cerr << "Username already exists. Please choose another." << std::endl;
+            SecurityCheck::logEvent("Duplicate username attempt: " + username);
+            return 1;
+        }
 
         std::unique_ptr<sql::PreparedStatement> stmt(
             conn->prepareStatement("INSERT INTO Profile (Name, GradYear, CurrentClasses) VALUES (?, ?, ?)")
@@ -52,8 +103,12 @@ int main() {
         stmt->executeUpdate();
 
         std::cout << "✅ Profile and login created successfully!" << std::endl;
+        
+        SecurityCheck::logEvent("Profile created for user: " + username);
+        
     } catch (sql::SQLException& e) {
         std::cerr << "SQL Error: " << e.what() << std::endl;
+        SecurityCheck::logEvent("SQL Error during profile creation");
     }
     return 0;
 }
