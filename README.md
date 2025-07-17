@@ -1,5 +1,4 @@
 # CEN3031-S16799-Group-4
-CEN3031 S16799 Group 4
 [![CodeFactor](https://www.codefactor.io/repository/github/justinsui624/study-sync-pro/badge)](https://www.codefactor.io/repository/github/justinsui624/study-sync-pro)
 # License
 Study-Sync-Pro use the Apache License 2.0 (https://github.com/JustinSui624/Study-Sync-Pro/blob/main/LICENSE)
