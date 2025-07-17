@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <stdexcept>
 #include <mysql_driver.h>
