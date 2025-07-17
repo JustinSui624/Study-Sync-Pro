@@ -105,7 +105,6 @@ int main() {
         std::cout << "✅ Profile and login created successfully!" << std::endl;
         
         SecurityCheck::logEvent("Profile created for user: " + username);
-        
     } catch (sql::SQLException& e) {
         std::cerr << "SQL Error: " << e.what() << std::endl;
         SecurityCheck::logEvent("SQL Error during profile creation");
