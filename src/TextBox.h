@@ -1,6 +1,5 @@
 #ifndef TEXTBOX_H
 #define TEXTBOX_H
-
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <iostream>
@@ -23,6 +22,7 @@ public:
     void draw(sf::RenderWindow& window);
     std::string getContent() const;
     void setActive(bool active);
+    void setContent(const std::string& content); // Added for pre-filling text boxes
 };
 
 #endif

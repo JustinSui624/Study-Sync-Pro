@@ -1,10 +1,8 @@
 #include "TextBox.h"
 #include <iostream>
-using namespace std;
 
 TextBox::TextBox(float x, float y, float width, float height, const std::string& labelText, sf::Font& font)
 {
-
     // Setup the box
     this->box.setSize(sf::Vector2f(width, height));
     this->box.setPosition(x, y);
@@ -29,9 +27,10 @@ TextBox::TextBox(float x, float y, float width, float height, const std::string&
     this->showCursor = true;
     this->content = "";
 }
+
 void TextBox::handleEvent(const sf::Event& event) {
     if (event.type == sf::Event::MouseButtonPressed) {
-        sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
+        sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
         sf::FloatRect boxBounds = box.getGlobalBounds();
         
         // Check if clicked inside the text box
@@ -56,6 +55,7 @@ void TextBox::handleEvent(const sf::Event& event) {
         updateDisplayText();
     }
 }
+
 void TextBox::update() {
     // Cursor blinking
     if (cursorClock.getElapsedTime().asMilliseconds() > 500) {
@@ -88,5 +88,10 @@ std::string TextBox::getContent() const {
 
 void TextBox::setActive(bool active) {
     this->isActive = active;
-    box.setOutlineColor(active ? sf::Color::Blue : sf::Color::White);
+    this->box.setOutlineColor(active ? sf::Color::Blue : sf::Color::White);
+}
+
+void TextBox::setContent(const std::string& content) {
+    this->content = content;
+    updateDisplayText();
 }
