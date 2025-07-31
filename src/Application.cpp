@@ -298,7 +298,7 @@ void Application::setupProfilePage() {
     
     createButton(300, 360, 140, 50, "Save Profile", sf::Color(34, 197, 94));
     createButton(450, 360, 140, 50, "Find Groups", sf::Color(168, 85, 247));
-    createButton(450, 430, 140, 50, "Logout", sf::Color(239, 68, 68));
+    createButton(600, 360, 140, 50, "Logout", sf::Color(239, 68, 68));
     
     showMessageText = true;
     messageText.setFont(font);
