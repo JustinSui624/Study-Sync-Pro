@@ -451,13 +451,14 @@ public:
                     sf::RectangleShape checkbox = checkboxes[i];
                     if (selectedItems[i]) {
                         checkbox.setFillColor(sf::Color::Blue);
-                        // Draw checkmark
+                        // Draw X mark
                         sf::Text checkmark;
                         checkmark.setFont(font);
-                        checkmark.setString("✓");
+                        checkmark.setString("X");
                         checkmark.setCharacterSize(12);
                         checkmark.setFillColor(sf::Color::White);
-                        checkmark.setPosition(checkbox.getPosition().x + 2, checkbox.getPosition().y - 2);
+                        checkmark.setStyle(sf::Text::Bold);
+                        checkmark.setPosition(checkbox.getPosition().x + 4, checkbox.getPosition().y + 1);
                         window.draw(checkbox);
                         window.draw(checkmark);
                     } else {
