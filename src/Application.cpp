@@ -32,8 +32,8 @@ Application::~Application() {
 void Application::initializeDatabase() {
     std::cout << "Attempting to connect to database..." << std::endl;
     
-    // Update this connection string with your actual database credentials
-    std::string connectionString = "dbname=postgres user=postgres password=yourpassword host=localhost port=5432";
+    // Your Supabase connection string
+    std::string connectionString = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
     
     try {
         std::cout << "Creating DatabaseManager..." << std::endl;
