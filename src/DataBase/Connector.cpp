@@ -1,5 +1,6 @@
 #include "pg_connector.hpp"
 #include <iostream>
+#include <string>
 
 int main() {
     std::string name = "Emma Johnson";
