@@ -1,9 +1,9 @@
 #include "Application.h"
 #include "pg_connector.hpp"
 
-Application::Application() : window(sf::VideoMode(800, 600), "Study Group Finder"), 
+Application::Application() : window(sf::VideoMode(1000, 700), "Study Sync Pro"), 
                             currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false) {
-    std::cout << "Starting Study Group Finder application..." << std::endl;
+    std::cout << "Starting Study Sync Pro application..." << std::endl;
     
     if (!font.loadFromFile("./fonts/arial.ttf")) {
         std::cout << "❌ Error loading font! Make sure arial.ttf is in the fonts/ directory" << std::endl;
@@ -147,91 +147,123 @@ void Application::setupCurrentPage() {
 
 void Application::setupLoginPage() {
     titleText.setFont(font);
-    titleText.setString("Login");
-    titleText.setCharacterSize(32);
-    titleText.setFillColor(sf::Color::White);
+    titleText.setString("Study Sync Pro");
+    titleText.setCharacterSize(42);
+    titleText.setFillColor(sf::Color(64, 156, 255)); // Modern blue
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 100);
+    centerText(titleText, 120);
     
-    textBoxes.push_back(new TextBox(250, 180, 300, 35, "Username:", font));
-    textBoxes.push_back(new TextBox(250, 250, 300, 35, "Password:", font));
+    // Subtitle
+    sf::Text subtitleText;
+    subtitleText.setFont(font);
+    subtitleText.setString("Connect with your academic community");
+    subtitleText.setCharacterSize(18);
+    subtitleText.setFillColor(sf::Color(180, 180, 180));
+    centerText(subtitleText, 170);
     
-    createButton(325, 320, 150, 40, "Login", sf::Color::Blue);
-    createButton(325, 380, 150, 40, "Register", sf::Color::Green);
+    textBoxes.push_back(new TextBox(350, 240, 300, 45, "Username:", font));
+    textBoxes.push_back(new TextBox(350, 320, 300, 45, "Password:", font));
+    
+    createButton(400, 400, 200, 50, "Login", sf::Color(64, 156, 255));
+    createButton(400, 470, 200, 50, "Create Account", sf::Color(34, 197, 94));
     
     showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
-    messageText.setFillColor(sf::Color::Red);
-    messageText.setPosition(250, 450);
+    messageText.setFillColor(sf::Color(239, 68, 68));
+    messageText.setPosition(350, 550);
     messageText.setString("");
 }
 
 void Application::setupRegistrationPage() {
     titleText.setFont(font);
-    titleText.setString("Registration");
-    titleText.setCharacterSize(32);
-    titleText.setFillColor(sf::Color::White);
+    titleText.setString("Create Your Account");
+    titleText.setCharacterSize(36);
+    titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 30);
+    centerText(titleText, 60);
     
-    textBoxes.push_back(new TextBox(250, 120, 300, 35, "Full Name:", font));
-    textBoxes.push_back(new TextBox(250, 185, 300, 35, "Graduation Year:", font));
-    textBoxes.push_back(new TextBox(250, 250, 300, 35, "Subjects (comma separated):", font));
-    textBoxes.push_back(new TextBox(250, 315, 300, 35, "Username:", font));
-    textBoxes.push_back(new TextBox(250, 380, 300, 35, "Password:", font));
-    textBoxes.push_back(new TextBox(250, 445, 300, 35, "Confirm Password:", font));
+    // Subtitle
+    sf::Text subtitleText;
+    subtitleText.setFont(font);
+    subtitleText.setString("Join the study community");
+    subtitleText.setCharacterSize(16);
+    subtitleText.setFillColor(sf::Color(160, 160, 160));
+    centerText(subtitleText, 100);
     
-    createButton(275, 510, 100, 40, "Register", sf::Color::Blue);
-    createButton(425, 510, 100, 40, "Back", sf::Color(128, 128, 128));
+    // Better spacing and layout
+    textBoxes.push_back(new TextBox(350, 140, 300, 45, "Full Name:", font));
+    textBoxes.push_back(new TextBox(350, 200, 300, 45, "Graduation Year:", font));
+    textBoxes.push_back(new TextBox(350, 260, 300, 45, "Current Classes:", font));
+    textBoxes.push_back(new TextBox(350, 320, 300, 45, "Username:", font));
+    textBoxes.push_back(new TextBox(350, 380, 300, 45, "Password:", font));
+    textBoxes.push_back(new TextBox(350, 440, 300, 45, "Confirm Password:", font));
+    
+    createButton(375, 520, 120, 50, "Register", sf::Color(34, 197, 94));
+    createButton(505, 520, 120, 50, "Back", sf::Color(107, 114, 128));
     
     showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
-    messageText.setFillColor(sf::Color::Red);
-    messageText.setPosition(250, 570);
+    messageText.setFillColor(sf::Color(239, 68, 68));
+    messageText.setPosition(350, 590);
     messageText.setString("");
 }
 
 void Application::setupProfilePage() {
     titleText.setFont(font);
-    titleText.setString("Profile - " + currentUser.name);
-    titleText.setCharacterSize(28);
-    titleText.setFillColor(sf::Color::White);
+    titleText.setString("Welcome, " + currentUser.name + "!");
+    titleText.setCharacterSize(32);
+    titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 80);
+    centerText(titleText, 100);
     
-    textBoxes.push_back(new TextBox(250, 150, 300, 35, "Subjects (comma separated):", font));
-    textBoxes.push_back(new TextBox(250, 220, 300, 35, "School/University:", font));
+    // User info display
+    sf::Text infoText;
+    infoText.setFont(font);
+    infoText.setString("Class of " + std::to_string(currentUser.gradYear));
+    infoText.setCharacterSize(18);
+    infoText.setFillColor(sf::Color(160, 160, 160));
+    centerText(infoText, 140);
+    
+    // Match database field names with better spacing
+    textBoxes.push_back(new TextBox(350, 200, 300, 45, "Current Classes:", font));
+    textBoxes.push_back(new TextBox(350, 270, 300, 45, "Graduation Year:", font));
     
     if (!currentUser.subjects.empty()) {
         textBoxes[0]->setContent(currentUser.subjects);
     }
-    if (!currentUser.location.empty()) {
-        textBoxes[1]->setContent(currentUser.location);
-    }
+    textBoxes[1]->setContent(std::to_string(currentUser.gradYear));
     
-    createButton(250, 290, 120, 40, "Save Profile", sf::Color::Blue);
-    createButton(380, 290, 120, 40, "Find Groups", sf::Color::Green);
-    createButton(510, 290, 90, 40, "Logout", sf::Color::Red);
+    createButton(300, 360, 140, 50, "Save Profile", sf::Color(34, 197, 94));
+    createButton(450, 360, 140, 50, "Find Groups", sf::Color(168, 85, 247));
+    createButton(450, 430, 140, 50, "Logout", sf::Color(239, 68, 68));
     
     showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
-    messageText.setFillColor(sf::Color::Green);
-    messageText.setPosition(250, 360);
+    messageText.setFillColor(sf::Color(34, 197, 94));
+    messageText.setPosition(350, 500);
     messageText.setString("");
 }
 
 void Application::setupGroupMatchingPage() {
     titleText.setFont(font);
-    titleText.setString("Recommended Study Groups");
-    titleText.setCharacterSize(28);
-    titleText.setFillColor(sf::Color::White);
+    titleText.setString("Your Study Groups");
+    titleText.setCharacterSize(36);
+    titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 40);
+    centerText(titleText, 60);
     
-    createButton(350, 520, 100, 40, "Back", sf::Color(128, 128, 128));
+    // Subtitle
+    sf::Text subtitleText;
+    subtitleText.setFont(font);
+    subtitleText.setString("Groups matching your classes");
+    subtitleText.setCharacterSize(16);
+    subtitleText.setFillColor(sf::Color(160, 160, 160));
+    centerText(subtitleText, 100);
+    
+    createButton(450, 600, 100, 50, "Back", sf::Color(107, 114, 128));
     
     showMessageText = false;
 }
@@ -240,8 +272,7 @@ void Application::createButton(float x, float y, float width, float height, cons
     sf::RectangleShape button(sf::Vector2f(width, height));
     button.setPosition(x, y);
     button.setFillColor(color);
-    button.setOutlineThickness(2);
-    button.setOutlineColor(sf::Color::White);
+    button.setOutlineThickness(0); // Remove outline for modern look
     buttons.push_back(button);
     
     sf::Text buttonText;
@@ -249,18 +280,19 @@ void Application::createButton(float x, float y, float width, float height, cons
     buttonText.setString(text);
     buttonText.setCharacterSize(16);
     buttonText.setFillColor(sf::Color::White);
+    buttonText.setStyle(sf::Text::Bold);
     
     sf::FloatRect textBounds = buttonText.getLocalBounds();
     buttonText.setPosition(
         x + (width - textBounds.width) / 2.0f,
-        y + (height - textBounds.height) / 2.0f - 5
+        y + (height - textBounds.height) / 2.0f - 3
     );
     buttonTexts.push_back(buttonText);
 }
 
 void Application::centerText(sf::Text& text, float y) {
     sf::FloatRect bounds = text.getLocalBounds();
-    text.setPosition((800 - bounds.width) / 2.0f, y);
+    text.setPosition((1000 - bounds.width) / 2.0f, y); // Updated for new window width
 }
 
 void Application::handleEvents() {
@@ -368,12 +400,12 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Register
         std::string name = textBoxes[0]->getContent();
         std::string gradYearStr = textBoxes[1]->getContent();
-        std::string subjects = textBoxes[2]->getContent();
+        std::string currentClasses = textBoxes[2]->getContent(); // Changed from subjects
         std::string username = textBoxes[3]->getContent();
         std::string password = textBoxes[4]->getContent();
         std::string confirmPass = textBoxes[5]->getContent();
         
-        if (name.empty() || gradYearStr.empty() || subjects.empty() || username.empty() || password.empty()) {
+        if (name.empty() || gradYearStr.empty() || currentClasses.empty() || username.empty() || password.empty()) {
             messageText.setString("Please fill all fields!");
             return;
         }
@@ -413,8 +445,8 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             }
             PQclear(checkRes);
             
-            // Insert into profile
-            std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), subjects.c_str()};
+            // Insert into profile table with correct field names
+            std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), currentClasses.c_str()};
             PGresult* profileRes = db.execParams(
                 "INSERT INTO profile (name, grad_year, current_classes) VALUES ($1, $2, $3) RETURNING id",
                 profileParams
@@ -446,7 +478,7 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             // Set current user and login
             currentUser.name = name;
             currentUser.username = username;
-            currentUser.subjects = subjects;
+            currentUser.subjects = currentClasses; // Store in subjects field for compatibility
             currentUser.gradYear = gradYear;
             currentUser.profileId = std::stoi(profileId);
             
@@ -470,13 +502,49 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
 
 void Application::handleProfileButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Save Profile
-        currentUser.subjects = textBoxes[0]->getContent();
-        currentUser.location = textBoxes[1]->getContent();
-        messageText.setString("Profile saved!");
+        std::string currentClasses = textBoxes[0]->getContent();
+        std::string gradYearStr = textBoxes[1]->getContent();
+        
+        int gradYear = 0;
+        try {
+            gradYear = std::stoi(gradYearStr);
+        } catch (...) {
+            messageText.setString("Invalid graduation year!");
+            return;
+        }
+        
+        // Try to update in database
+        try {
+            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+            PgConnector db(connStr);
+            
+            std::vector<const char*> params = {
+                currentClasses.c_str(),
+                std::to_string(gradYear).c_str(),
+                std::to_string(currentUser.profileId).c_str()
+            };
+            
+            PGresult* res = db.execParams(
+                "UPDATE profile SET current_classes = $1, grad_year = $2 WHERE id = $3",
+                params
+            );
+            PQclear(res);
+            
+            // Update local user data
+            currentUser.subjects = currentClasses;
+            currentUser.gradYear = gradYear;
+            
+            messageText.setString("Profile saved successfully!");
+            std::cout << "✅ Profile updated in database" << std::endl;
+            
+        } catch (const std::exception& e) {
+            std::cout << "Database update failed: " << e.what() << std::endl;
+            messageText.setString("Failed to save profile!");
+        }
         
     } else if (buttonIndex == 1) { // Find Groups
         if (currentUser.subjects.empty()) {
-            messageText.setString("Please add subjects first!");
+            messageText.setString("Please add current classes first!");
         } else {
             currentPage = PageType::GROUP_MATCHING;
             setupCurrentPage();
@@ -518,7 +586,8 @@ void Application::update() {
 }
 
 void Application::render() {
-    window.clear(sf::Color::Black);
+    // Modern gradient background
+    window.clear(sf::Color(15, 23, 42)); // Dark blue-gray background
     
     window.draw(titleText);
     
@@ -544,45 +613,72 @@ void Application::render() {
 
 void Application::renderGroupMatches() {
     auto matches = getMatchedGroups();
-    float yPos = 90;
+    float yPos = 140;
     
-    for (size_t i = 0; i < matches.size() && i < 5; ++i) {
+    for (size_t i = 0; i < matches.size() && i < 6; ++i) {
         const auto& group = matches[i];
         
+        // Create a card-like background for each group
+        sf::RectangleShape groupCard(sf::Vector2f(800, 70));
+        groupCard.setPosition(100, yPos);
+        groupCard.setFillColor(sf::Color(30, 41, 59)); // Darker card background
+        groupCard.setOutlineThickness(1);
+        groupCard.setOutlineColor(sf::Color(51, 65, 85));
+        window.draw(groupCard);
+        
+        // Group name
         sf::Text groupName;
         groupName.setFont(font);
-        groupName.setString(group.name + " (" + std::to_string(group.memberCount) + " members)");
-        groupName.setCharacterSize(18);
-        groupName.setFillColor(sf::Color::Yellow);
-        groupName.setPosition(50, yPos);
+        groupName.setString(group.name);
+        groupName.setCharacterSize(20);
+        groupName.setFillColor(sf::Color(245, 245, 245));
+        groupName.setStyle(sf::Text::Bold);
+        groupName.setPosition(120, yPos + 8);
         window.draw(groupName);
         
+        // Member count badge
+        sf::CircleShape memberBadge(12);
+        memberBadge.setPosition(820, yPos + 10);
+        memberBadge.setFillColor(sf::Color(34, 197, 94));
+        window.draw(memberBadge);
+        
+        sf::Text memberCount;
+        memberCount.setFont(font);
+        memberCount.setString(std::to_string(group.memberCount));
+        memberCount.setCharacterSize(12);
+        memberCount.setFillColor(sf::Color::White);
+        memberCount.setStyle(sf::Text::Bold);
+        memberCount.setPosition(826, yPos + 14);
+        window.draw(memberCount);
+        
+        // Group description
         sf::Text groupDesc;
         groupDesc.setFont(font);
         groupDesc.setString(group.description);
         groupDesc.setCharacterSize(14);
-        groupDesc.setFillColor(sf::Color::White);
-        groupDesc.setPosition(70, yPos + 25);
+        groupDesc.setFillColor(sf::Color(156, 163, 175));
+        groupDesc.setPosition(120, yPos + 32);
         window.draw(groupDesc);
         
-        sf::Text groupInfo;
-        groupInfo.setFont(font);
-        groupInfo.setString("School: " + group.location + " | Subjects: " + group.subjects);
-        groupInfo.setCharacterSize(12);
-        groupInfo.setFillColor(sf::Color::Cyan);
-        groupInfo.setPosition(70, yPos + 45);
-        window.draw(groupInfo);
+        // Location
+        sf::Text locationText;
+        locationText.setFont(font);
+        locationText.setString("📍 " + group.location);
+        locationText.setCharacterSize(12);
+        locationText.setFillColor(sf::Color(107, 114, 128));
+        locationText.setPosition(120, yPos + 52);
+        window.draw(locationText);
         
-        yPos += 85;
+        yPos += 80;
     }
     
     if (matches.empty()) {
         sf::Text noMatches;
         noMatches.setFont(font);
-        noMatches.setString("No matching study groups found. Try updating your subjects!");
-        noMatches.setCharacterSize(16);
-        noMatches.setFillColor(sf::Color::Red);
-        noMatches.setPosition(150, 200);
+        noMatches.setString("No matching study groups found yet.\nTry updating your classes in your profile!");
+        noMatches.setCharacterSize(18);
+        noMatches.setFillColor(sf::Color(156, 163, 175));
+        centerText(noMatches, 300);
         window.draw(noMatches);
     }
 }
