@@ -120,6 +120,17 @@ void Application::clearTextBoxes() {
         delete textBox;
     }
     textBoxes.clear();
+    
+    for (auto* dropdown : dropdownMenus) {
+        delete dropdown;
+    }
+    dropdownMenus.clear();
+    
+    for (auto* multiDropdown : multiSelectDropdowns) {
+        delete multiDropdown;
+    }
+    multiSelectDropdowns.clear();
+    
     buttons.clear();
     buttonTexts.clear();
     labels.clear();
@@ -181,32 +192,58 @@ void Application::setupRegistrationPage() {
     titleText.setCharacterSize(36);
     titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 60);
+    centerText(titleText, 40);
     
-    // Subtitle
     sf::Text subtitleText;
     subtitleText.setFont(font);
     subtitleText.setString("Join the study community");
     subtitleText.setCharacterSize(16);
-    subtitleText.setFillColor(sf::Color(160, 160, 160));
-    centerText(subtitleText, 100);
+    subtitleText.setFillColor(sf::Color(180, 180, 180));
+    centerText(subtitleText, 80);
     
-    // Better spacing and layout
-    textBoxes.push_back(new TextBox(350, 140, 300, 45, "Full Name:", font));
-    textBoxes.push_back(new TextBox(350, 200, 300, 45, "Graduation Year:", font));
-    textBoxes.push_back(new TextBox(350, 260, 300, 45, "Current Classes:", font));
-    textBoxes.push_back(new TextBox(350, 320, 300, 45, "Username:", font));
-    textBoxes.push_back(new TextBox(350, 380, 300, 45, "Password:", font));
-    textBoxes.push_back(new TextBox(350, 440, 300, 45, "Confirm Password:", font));
+    clearTextBoxes();
     
-    createButton(375, 520, 120, 50, "Register", sf::Color(34, 197, 94));
-    createButton(505, 520, 120, 50, "Back", sf::Color(107, 114, 128));
+    // Common subjects list
+    std::vector<std::string> subjects = {
+        "Mathematics", "Algebra", "Calculus", "Geometry", "Statistics",
+        "Science", "Biology", "Chemistry", "Physics", "Environmental Science",
+        "English", "Literature", "Creative Writing", "Grammar", "Public Speaking",
+        "History", "World History", "US History", "European History", "Government",
+        "Computer Science", "Programming", "Data Structures", "Algorithms", "Web Development",
+        "Art", "Music", "Theater", "Photography", "Graphic Design",
+        "Foreign Languages", "Spanish", "French", "German", "Chinese",
+        "Economics", "Psychology", "Sociology", "Philosophy", "Business"
+    };
+    
+    const float startY = 120;
+    const float spacing = 80;
+    
+    textBoxes.push_back(new TextBox(350, startY, 300, 45, "Full Name:", font));
+    textBoxes.push_back(new TextBox(350, startY + spacing, 300, 45, "Graduation Year:", font));
+    
+    // Multi-select subject dropdown with proper label
+    sf::Text subjectLabel;
+    subjectLabel.setFont(font);
+    subjectLabel.setString("Subjects (select multiple):");
+    subjectLabel.setCharacterSize(16);
+    subjectLabel.setFillColor(sf::Color::White);
+    subjectLabel.setPosition(350, startY + 2 * spacing - 25);
+    labels.push_back(subjectLabel);
+    
+    multiSelectDropdowns.push_back(new MultiSelectDropdown(350, startY + 2 * spacing, 300, 45, font, subjects, 5));
+    
+    textBoxes.push_back(new TextBox(350, startY + 3 * spacing, 300, 45, "Username:", font));
+    textBoxes.push_back(new TextBox(350, startY + 4 * spacing, 300, 45, "Password:", font));
+    textBoxes.push_back(new TextBox(350, startY + 5 * spacing, 300, 45, "Confirm Password:", font));
+    
+    createButton(350, startY + 6 * spacing + 30, 140, 50, "Register", sf::Color(34, 197, 94));
+    createButton(510, startY + 6 * spacing + 30, 140, 50, "Back", sf::Color(107, 114, 128));
     
     showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
     messageText.setFillColor(sf::Color(239, 68, 68));
-    messageText.setPosition(350, 590);
+    messageText.setPosition(350, startY + 7 * spacing + 30);
     messageText.setString("");
 }
 
@@ -218,7 +255,6 @@ void Application::setupProfilePage() {
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 100);
     
-    // User info display
     sf::Text infoText;
     infoText.setFont(font);
     infoText.setString("Class of " + std::to_string(currentUser.gradYear));
@@ -226,14 +262,39 @@ void Application::setupProfilePage() {
     infoText.setFillColor(sf::Color(160, 160, 160));
     centerText(infoText, 140);
     
-    // Match database field names with better spacing
-    textBoxes.push_back(new TextBox(350, 200, 300, 45, "Current Classes:", font));
-    textBoxes.push_back(new TextBox(350, 270, 300, 45, "Graduation Year:", font));
+    clearTextBoxes();
     
+    // Common subjects list
+    std::vector<std::string> subjects = {
+        "Mathematics", "Algebra", "Calculus", "Geometry", "Statistics",
+        "Science", "Biology", "Chemistry", "Physics", "Environmental Science",
+        "English", "Literature", "Creative Writing", "Grammar", "Public Speaking",
+        "History", "World History", "US History", "European History", "Government",
+        "Computer Science", "Programming", "Data Structures", "Algorithms", "Web Development",
+        "Art", "Music", "Theater", "Photography", "Graphic Design",
+        "Foreign Languages", "Spanish", "French", "German", "Chinese",
+        "Economics", "Psychology", "Sociology", "Philosophy", "Business"
+    };
+    
+    // Subject multi-select dropdown with proper label
+    sf::Text subjectLabel;
+    subjectLabel.setFont(font);
+    subjectLabel.setString("Subjects (select multiple):");
+    subjectLabel.setCharacterSize(16);
+    subjectLabel.setFillColor(sf::Color::White);
+    subjectLabel.setPosition(350, 175);
+    labels.push_back(subjectLabel);
+    
+    multiSelectDropdowns.push_back(new MultiSelectDropdown(350, 200, 300, 45, font, subjects, 5));
+    
+    // Set existing subjects if any
     if (!currentUser.subjects.empty()) {
-        textBoxes[0]->setContent(currentUser.subjects);
+        auto userSubjects = parseSubjects(currentUser.subjects);
+        multiSelectDropdowns[0]->setSelectedItems(userSubjects);
     }
-    textBoxes[1]->setContent(std::to_string(currentUser.gradYear));
+    
+    textBoxes.push_back(new TextBox(350, 270, 300, 45, "Graduation Year:", font));
+    textBoxes[0]->setContent(std::to_string(currentUser.gradYear));
     
     createButton(300, 360, 140, 50, "Save Profile", sf::Color(34, 197, 94));
     createButton(450, 360, 140, 50, "Find Groups", sf::Color(168, 85, 247));
@@ -303,6 +364,14 @@ void Application::handleEvents() {
         
         for (auto* textBox : textBoxes) {
             textBox->handleEvent(event);
+        }
+        
+        for (auto* dropdown : dropdownMenus) {
+            dropdown->handleEvent(event, window);
+        }
+        
+        for (auto* multiDropdown : multiSelectDropdowns) {
+            multiDropdown->handleEvent(event, window);
         }
         
         if (event.type == sf::Event::MouseButtonPressed) {
@@ -400,10 +469,10 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Register
         std::string name = textBoxes[0]->getContent();
         std::string gradYearStr = textBoxes[1]->getContent();
-        std::string currentClasses = textBoxes[2]->getContent(); // Changed from subjects
-        std::string username = textBoxes[3]->getContent();
-        std::string password = textBoxes[4]->getContent();
-        std::string confirmPass = textBoxes[5]->getContent();
+        std::string currentClasses = multiSelectDropdowns[0]->getSelectedItemsString();
+        std::string username = textBoxes[2]->getContent();
+        std::string password = textBoxes[3]->getContent();
+        std::string confirmPass = textBoxes[4]->getContent();
         
         if (name.empty() || gradYearStr.empty() || currentClasses.empty() || username.empty() || password.empty()) {
             messageText.setString("Please fill all fields!");
@@ -428,7 +497,6 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
             PgConnector db(connStr);
             
-            // Begin transaction
             PGresult* beginRes = db.exec("BEGIN");
             PQclear(beginRes);
             
@@ -445,7 +513,7 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             }
             PQclear(checkRes);
             
-            // Insert into profile table with correct field names
+            // Insert into profile table
             std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), currentClasses.c_str()};
             PGresult* profileRes = db.execParams(
                 "INSERT INTO profile (name, grad_year, current_classes) VALUES ($1, $2, $3) RETURNING id",
@@ -463,7 +531,7 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             std::string profileId = PQgetvalue(profileRes, 0, 0);
             PQclear(profileRes);
             
-            // Insert into user_login with plain text password
+            // Insert into user_login
             std::vector<const char*> loginParams = {username.c_str(), password.c_str(), profileId.c_str()};
             PGresult* loginRes = db.execParams(
                 "INSERT INTO user_login (username, password_hash, profile_id) VALUES ($1, $2, $3)",
@@ -471,14 +539,13 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             );
             PQclear(loginRes);
             
-            // Commit transaction
             PGresult* commitRes = db.exec("COMMIT");
             PQclear(commitRes);
             
             // Set current user and login
             currentUser.name = name;
             currentUser.username = username;
-            currentUser.subjects = currentClasses; // Store in subjects field for compatibility
+            currentUser.subjects = currentClasses;
             currentUser.gradYear = gradYear;
             currentUser.profileId = std::stoi(profileId);
             
@@ -502,8 +569,13 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
 
 void Application::handleProfileButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Save Profile
-        std::string currentClasses = textBoxes[0]->getContent();
-        std::string gradYearStr = textBoxes[1]->getContent();
+        std::string subjects = multiSelectDropdowns[0]->getSelectedItemsString();
+        std::string gradYearStr = textBoxes[0]->getContent();
+        
+        if (subjects.empty()) {
+            messageText.setString("Please select at least one subject!");
+            return;
+        }
         
         int gradYear = 0;
         try {
@@ -519,7 +591,7 @@ void Application::handleProfileButtons(size_t buttonIndex) {
             PgConnector db(connStr);
             
             std::vector<const char*> params = {
-                currentClasses.c_str(),
+                subjects.c_str(),
                 std::to_string(gradYear).c_str(),
                 std::to_string(currentUser.profileId).c_str()
             };
@@ -531,7 +603,7 @@ void Application::handleProfileButtons(size_t buttonIndex) {
             PQclear(res);
             
             // Update local user data
-            currentUser.subjects = currentClasses;
+            currentUser.subjects = subjects;
             currentUser.gradYear = gradYear;
             
             messageText.setString("Profile saved successfully!");
@@ -544,7 +616,7 @@ void Application::handleProfileButtons(size_t buttonIndex) {
         
     } else if (buttonIndex == 1) { // Find Groups
         if (currentUser.subjects.empty()) {
-            messageText.setString("Please add current classes first!");
+            messageText.setString("Please add subjects first!");
         } else {
             currentPage = PageType::GROUP_MATCHING;
             setupCurrentPage();
@@ -569,13 +641,32 @@ std::vector<Group> Application::getMatchedGroups() {
     std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
     
     for (const auto& group : groups) {
+        std::vector<std::string> groupSubjects = parseSubjects(group.subjects);
+        
+        // Check if any user subject matches any group subject
+        bool hasMatch = false;
         for (const auto& userSubject : userSubjects) {
-            if (group.subjects.find(userSubject) != std::string::npos) {
-                matches.push_back(group);
-                break;
+            for (const auto& groupSubject : groupSubjects) {
+                // Case-insensitive partial matching
+                std::string userSubjectLower = userSubject;
+                std::string groupSubjectLower = groupSubject;
+                std::transform(userSubjectLower.begin(), userSubjectLower.end(), userSubjectLower.begin(), ::tolower);
+                std::transform(groupSubjectLower.begin(), groupSubjectLower.end(), groupSubjectLower.begin(), ::tolower);
+                
+                if (groupSubjectLower.find(userSubjectLower) != std::string::npos ||
+                    userSubjectLower.find(groupSubjectLower) != std::string::npos) {
+                    hasMatch = true;
+                    break;
+                }
             }
+            if (hasMatch) break;
+        }
+        
+        if (hasMatch) {
+            matches.push_back(group);
         }
     }
+    
     return matches;
 }
 
@@ -583,18 +674,37 @@ void Application::update() {
     for (auto* textBox : textBoxes) {
         textBox->update();
     }
+    
+    for (auto* dropdown : dropdownMenus) {
+        dropdown->update();
+    }
+    
+    for (auto* multiDropdown : multiSelectDropdowns) {
+        multiDropdown->update();
+    }
 }
 
 void Application::render() {
-    // Modern gradient background
-    window.clear(sf::Color(15, 23, 42)); // Dark blue-gray background
+    window.clear(sf::Color(15, 23, 42));
     
     window.draw(titleText);
+    
+    for (const auto& label : labels) {
+        window.draw(label);
+    }
     
     for (auto* textBox : textBoxes) {
         textBox->draw(window);
     }
+     
+    for (auto* dropdown : dropdownMenus) {
+        dropdown->draw(window);
+    }
     
+    for (auto* multiDropdown : multiSelectDropdowns) {
+        multiDropdown->draw(window);
+    }
+	
     for (size_t i = 0; i < buttons.size(); ++i) {
         window.draw(buttons[i]);
         window.draw(buttonTexts[i]);
