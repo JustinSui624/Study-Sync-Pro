@@ -1,6 +1,5 @@
 #include "Application.h"
 #include "pg_connector.hpp"
-#include <stdexcept>
 
 Application::Application() : window(sf::VideoMode(800, 600), "Study Group Finder"), 
                             currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false) {
@@ -38,26 +37,46 @@ void Application::initializeDatabase() {
         // Test your exact connection string
         std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
         
-        // Just include the header and test connection
         PgConnector db(connStr);
         
-        // Try a simple query
-        PGresult* res = db.exec("SELECT COUNT(*) FROM groups");
-        int count = std::stoi(PQgetvalue(res, 0, 0));
+        // Try to get groups from your actual database
+        PGresult* res = db.exec("SELECT group_name, description FROM groups");
+        int groupCount = PQntuples(res);
+        
+        std::cout << "✅ Database connected! Found " << groupCount << " groups in database" << std::endl;
+        
+        // Load actual groups from database
+        for (int i = 0; i < groupCount; i++) {
+            Group group;
+            group.name = PQgetvalue(res, i, 0);
+            group.description = PQgetvalue(res, i, 1) ? PQgetvalue(res, i, 1) : "";
+            group.subjects = group.name; // Use group name for subject matching
+            group.location = "Various Locations";
+            group.memberCount = 5 + (i % 10); // Mock member count
+            groups.push_back(group);
+        }
         PQclear(res);
         
-        std::cout << "✅ Database connected! Found " << count << " groups" << std::endl;
+        if (groups.empty()) {
+            std::cout << "No groups found in database, using sample data" << std::endl;
+            // Fallback to sample data
+            groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
+            groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
+            groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
+        }
         
     } catch (const std::exception& e) {
         std::cout << "❌ Database connection failed: " << e.what() << std::endl;
+        
+        // Fallback to sample data
+        groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
+        groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
+        groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
+        groups.push_back({"English Essay Editors", "Peer editing group for literature assignments", "english,literature", "English Department", 6});
+        groups.push_back({"SAT Prep Circle", "Preparing for SAT with weekly practice tests", "math,english,test prep", "Testing Center", 10});
     }
     
-    // For now, just use sample data
-    groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
-    groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
-    groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
-    
-    std::cout << "Loaded " << groups.size() << " sample groups" << std::endl;
+    std::cout << "Loaded " << groups.size() << " study groups" << std::endl;
 }
 
 void Application::run() {
@@ -293,7 +312,42 @@ void Application::handleLoginButtons(size_t buttonIndex) {
         std::string username = textBoxes[0]->getContent();
         std::string password = textBoxes[1]->getContent();
         
-        // Simple offline login for now
+        // Try database login
+        try {
+            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+            PgConnector db(connStr);
+            
+            // Check username and password directly (plain text)
+            std::vector<const char*> params = {username.c_str(), password.c_str()};
+            PGresult* res = db.execParams(
+                "SELECT u.username, p.name, p.grad_year, p.current_classes, p.id "
+                "FROM user_login u JOIN profile p ON u.profile_id = p.id "
+                "WHERE u.username = $1 AND u.password_hash = $2", 
+                params
+            );
+            
+            if (PQntuples(res) > 0) {
+                currentUser.username = PQgetvalue(res, 0, 0);
+                currentUser.name = PQgetvalue(res, 0, 1);
+                currentUser.gradYear = std::stoi(PQgetvalue(res, 0, 2));
+                currentUser.subjects = PQgetvalue(res, 0, 3) ? PQgetvalue(res, 0, 3) : "";
+                currentUser.profileId = std::stoi(PQgetvalue(res, 0, 4));
+                
+                PQclear(res);
+                
+                isLoggedIn = true;
+                currentPage = PageType::PROFILE;
+                setupCurrentPage();
+                std::cout << "✅ Database login successful for: " << username << std::endl;
+                return;
+            }
+            PQclear(res);
+            
+        } catch (const std::exception& e) {
+            std::cout << "Database login failed: " << e.what() << std::endl;
+        }
+        
+        // Fallback to simple test login
         if (username == "test" && password == "test") {
             currentUser.username = username;
             currentUser.name = "Test User";
@@ -302,7 +356,7 @@ void Application::handleLoginButtons(size_t buttonIndex) {
             currentPage = PageType::PROFILE;
             setupCurrentPage();
         } else {
-            messageText.setString("Invalid username or password! (try test/test)");
+            messageText.setString("Invalid username or password!");
         }
     } else if (buttonIndex == 1) { // Register
         currentPage = PageType::REGISTRATION;
@@ -329,20 +383,84 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             return;
         }
         
-        // Simple registration for now
-        currentUser.name = name;
-        currentUser.username = username;
-        currentUser.subjects = subjects;
+        int gradYear = 0;
         try {
-            currentUser.gradYear = std::stoi(gradYearStr);
+            gradYear = std::stoi(gradYearStr);
         } catch (...) {
             messageText.setString("Invalid graduation year!");
             return;
         }
         
-        isLoggedIn = true;
-        currentPage = PageType::PROFILE; 
-        setupCurrentPage();
+        // Try to register in database
+        try {
+            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+            PgConnector db(connStr);
+            
+            // Begin transaction
+            PGresult* beginRes = db.exec("BEGIN");
+            PQclear(beginRes);
+            
+            // Check if username already exists
+            std::vector<const char*> checkParams = {username.c_str()};
+            PGresult* checkRes = db.execParams("SELECT username FROM user_login WHERE username = $1", checkParams);
+            
+            if (PQntuples(checkRes) > 0) {
+                PQclear(checkRes);
+                PGresult* rollbackRes = db.exec("ROLLBACK");
+                PQclear(rollbackRes);
+                messageText.setString("Username already exists!");
+                return;
+            }
+            PQclear(checkRes);
+            
+            // Insert into profile
+            std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), subjects.c_str()};
+            PGresult* profileRes = db.execParams(
+                "INSERT INTO profile (name, grad_year, current_classes) VALUES ($1, $2, $3) RETURNING id",
+                profileParams
+            );
+            
+            if (PQntuples(profileRes) == 0) {
+                PQclear(profileRes);
+                PGresult* rollbackRes = db.exec("ROLLBACK");
+                PQclear(rollbackRes);
+                messageText.setString("Failed to create profile!");
+                return;
+            }
+            
+            std::string profileId = PQgetvalue(profileRes, 0, 0);
+            PQclear(profileRes);
+            
+            // Insert into user_login with plain text password
+            std::vector<const char*> loginParams = {username.c_str(), password.c_str(), profileId.c_str()};
+            PGresult* loginRes = db.execParams(
+                "INSERT INTO user_login (username, password_hash, profile_id) VALUES ($1, $2, $3)",
+                loginParams
+            );
+            PQclear(loginRes);
+            
+            // Commit transaction
+            PGresult* commitRes = db.exec("COMMIT");
+            PQclear(commitRes);
+            
+            // Set current user and login
+            currentUser.name = name;
+            currentUser.username = username;
+            currentUser.subjects = subjects;
+            currentUser.gradYear = gradYear;
+            currentUser.profileId = std::stoi(profileId);
+            
+            isLoggedIn = true;
+            currentPage = PageType::PROFILE;
+            setupCurrentPage();
+            std::cout << "✅ User registered successfully in database: " << username << std::endl;
+            return;
+            
+        } catch (const std::exception& e) {
+            std::cout << "Database registration failed: " << e.what() << std::endl;
+            messageText.setString("Registration failed! Try again.");
+            return;
+        }
         
     } else if (buttonIndex == 1) { // Back
         currentPage = PageType::LOGIN;
