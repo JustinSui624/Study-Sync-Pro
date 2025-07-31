@@ -4,15 +4,32 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <memory>
 #include "TextBox.h"
-#include "DatabaseManager.h"
 
 enum class PageType {
     LOGIN,
     REGISTRATION,
     PROFILE,
     GROUP_MATCHING
+};
+
+struct User {
+    std::string username;
+    std::string password;
+    std::string name;
+    int gradYear;
+    std::string subjects;
+    std::string location;
+    int profileId = -1;
+};
+
+struct Group {
+    std::string name;
+    std::string description;
+    std::string subjects;
+    std::string location;
+    int memberCount;
+    int id = -1;
 };
 
 class Application {
@@ -36,14 +53,10 @@ private:
     std::vector<sf::Text> buttonTexts;
     std::vector<sf::Text> labels;
     
-    // Database integration
-    std::unique_ptr<DatabaseManager> dbManager;
     User currentUser;
     std::vector<Group> groups;
     
-    // Initialize database connection
     void initializeDatabase();
-    
     void clearTextBoxes();
     void setupCurrentPage();
     void setupLoginPage();
@@ -68,6 +81,5 @@ private:
     void render();
     void renderGroupMatches();
     
-    // Helper method to parse subjects
     std::vector<std::string> parseSubjects(const std::string& subjects);
 };

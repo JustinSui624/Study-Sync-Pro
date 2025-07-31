@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "pg_connector.hpp"
+#include <stdexcept>
 
 Application::Application() : window(sf::VideoMode(800, 600), "Study Group Finder"), 
                             currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false) {
@@ -30,41 +32,32 @@ Application::~Application() {
 }
 
 void Application::initializeDatabase() {
-    std::cout << "Attempting to connect to database..." << std::endl;
-    
-    // Your Supabase connection string
-    std::string connectionString = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+    std::cout << "Testing database connection..." << std::endl;
     
     try {
-        std::cout << "Creating DatabaseManager..." << std::endl;
-        dbManager = std::make_unique<DatabaseManager>(connectionString);
-        std::cout << "DatabaseManager created." << std::endl;
+        // Test your exact connection string
+        std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
         
-        if (dbManager->isConnected()) {
-            std::cout << "Database connected successfully!" << std::endl;
-            dbManager->initializeTables();
-            
-            // Load groups from database
-            groups = dbManager->getAllGroups();
-            std::cout << "✅ Loaded " << groups.size() << " study groups from database" << std::endl;
-        } else {
-            std::cout << "❌ Database connection failed. Running in offline mode." << std::endl;
-            // Add some sample groups for offline mode
-            groups.push_back({"Sample Math Group", "Basic math tutoring", "math,algebra", "Local University", 5});
-            groups.push_back({"Science Study Circle", "Biology and chemistry", "biology,chemistry,science", "Community College", 8});
-        }
+        // Just include the header and test connection
+        PgConnector db(connStr);
+        
+        // Try a simple query
+        PGresult* res = db.exec("SELECT COUNT(*) FROM groups");
+        int count = std::stoi(PQgetvalue(res, 0, 0));
+        PQclear(res);
+        
+        std::cout << "✅ Database connected! Found " << count << " groups" << std::endl;
         
     } catch (const std::exception& e) {
-        std::cout << "❌ Database initialization failed: " << e.what() << std::endl;
-        std::cout << "Running in offline mode with sample data." << std::endl;
-        dbManager = nullptr;
-        
-        // Add sample groups for offline mode
-        groups.push_back({"Sample Math Group", "Basic math tutoring", "math,algebra", "Local University", 5});
-        groups.push_back({"Science Study Circle", "Biology and chemistry", "biology,chemistry,science", "Community College", 8});
+        std::cout << "❌ Database connection failed: " << e.what() << std::endl;
     }
     
-    std::cout << "Database initialization complete." << std::endl;
+    // For now, just use sample data
+    groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
+    groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
+    groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
+    
+    std::cout << "Loaded " << groups.size() << " sample groups" << std::endl;
 }
 
 void Application::run() {
@@ -300,12 +293,16 @@ void Application::handleLoginButtons(size_t buttonIndex) {
         std::string username = textBoxes[0]->getContent();
         std::string password = textBoxes[1]->getContent();
         
-        if (dbManager && dbManager->authenticateUser(username, password, currentUser)) {
+        // Simple offline login for now
+        if (username == "test" && password == "test") {
+            currentUser.username = username;
+            currentUser.name = "Test User";
+            currentUser.subjects = "Math, Science";
             isLoggedIn = true;
             currentPage = PageType::PROFILE;
             setupCurrentPage();
         } else {
-            messageText.setString("Invalid username or password!");
+            messageText.setString("Invalid username or password! (try test/test)");
         }
     } else if (buttonIndex == 1) { // Register
         currentPage = PageType::REGISTRATION;
@@ -332,24 +329,20 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             return;
         }
         
-        int gradYear = 0;
+        // Simple registration for now
+        currentUser.name = name;
+        currentUser.username = username;
+        currentUser.subjects = subjects;
         try {
-            gradYear = std::stoi(gradYearStr);
+            currentUser.gradYear = std::stoi(gradYearStr);
         } catch (...) {
             messageText.setString("Invalid graduation year!");
             return;
         }
         
-        if (dbManager && dbManager->createProfileAndLogin(name, gradYear, subjects, username, password)) {
-            // After successful registration, log them in
-            if (dbManager->authenticateUser(username, password, currentUser)) {
-                isLoggedIn = true;
-                currentPage = PageType::PROFILE;
-                setupCurrentPage();
-            }
-        } else {
-            messageText.setString("Registration failed! Username might already exist.");
-        }
+        isLoggedIn = true;
+        currentPage = PageType::PROFILE; 
+        setupCurrentPage();
         
     } else if (buttonIndex == 1) { // Back
         currentPage = PageType::LOGIN;
@@ -361,27 +354,18 @@ void Application::handleProfileButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Save Profile
         currentUser.subjects = textBoxes[0]->getContent();
         currentUser.location = textBoxes[1]->getContent();
-        
-        if (dbManager && dbManager->updateUserProfile(currentUser)) {
-            messageText.setString("Profile saved successfully!");
-        } else {
-            messageText.setString("Failed to save profile!");
-        }
+        messageText.setString("Profile saved!");
         
     } else if (buttonIndex == 1) { // Find Groups
         if (currentUser.subjects.empty()) {
             messageText.setString("Please add subjects first!");
         } else {
-            // Refresh groups from database before matching
-            if (dbManager) {
-                groups = dbManager->getAllGroups();
-            }
             currentPage = PageType::GROUP_MATCHING;
             setupCurrentPage();
         }
     } else if (buttonIndex == 2) { // Logout
         isLoggedIn = false;
-        currentUser = User{}; // Reset current user
+        currentUser = User{};
         currentPage = PageType::LOGIN;
         setupCurrentPage();
     }
@@ -395,24 +379,18 @@ void Application::handleGroupMatchingButtons(size_t buttonIndex) {
 }
 
 std::vector<Group> Application::getMatchedGroups() {
-    if (dbManager) {
-        std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
-        return dbManager->getMatchingGroups(userSubjects);
-    } else {
-        // Fallback to local matching if database is unavailable
-        std::vector<Group> matches;
-        std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
-        
-        for (const auto& group : groups) {
-            for (const auto& userSubject : userSubjects) {
-                if (group.subjects.find(userSubject) != std::string::npos) {
-                    matches.push_back(group);
-                    break;
-                }
+    std::vector<Group> matches;
+    std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
+    
+    for (const auto& group : groups) {
+        for (const auto& userSubject : userSubjects) {
+            if (group.subjects.find(userSubject) != std::string::npos) {
+                matches.push_back(group);
+                break;
             }
         }
-        return matches;
     }
+    return matches;
 }
 
 void Application::update() {
