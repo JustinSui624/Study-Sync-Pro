@@ -1,69 +1,106 @@
 #include "Application.h"
 
 Application::Application() : window(sf::VideoMode(800, 600), "Study Group Finder"), 
-                            currentPage(PageType::LOGIN), isLoggedIn(false) {
+                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false) {
+    std::cout << "Starting Study Group Finder application..." << std::endl;
+    
     if (!font.loadFromFile("./fonts/arial.ttf")) {
-        std::cout << "Error loading font!" << std::endl;
+        std::cout << "❌ Error loading font! Make sure arial.ttf is in the fonts/ directory" << std::endl;
+        std::cout << "Trying alternative font loading..." << std::endl;
+        if (!font.loadFromFile("fonts/arial.ttf")) {
+            std::cout << "❌ Could not load font from fonts/arial.ttf either" << std::endl;
+            std::cout << "Application will continue but text may not display properly" << std::endl;
+        } else {
+            std::cout << "✅ Font loaded from fonts/arial.ttf" << std::endl;
+        }
+    } else {
+        std::cout << "✅ Font loaded successfully!" << std::endl;
     }
     
-    // Initialize some sample groups
-    initializeSampleGroups();
+    // Initialize database connection
+    initializeDatabase();
+    
+    std::cout << "Setting up initial page..." << std::endl;
     setupCurrentPage();
+    std::cout << "✅ Application ready!" << std::endl;
 }
 
 Application::~Application() {
     clearTextBoxes();
 }
 
+void Application::initializeDatabase() {
+    std::cout << "Attempting to connect to database..." << std::endl;
+    
+    // Update this connection string with your actual database credentials
+    std::string connectionString = "dbname=postgres user=postgres password=yourpassword host=localhost port=5432";
+    
+    try {
+        std::cout << "Creating DatabaseManager..." << std::endl;
+        dbManager = std::make_unique<DatabaseManager>(connectionString);
+        std::cout << "DatabaseManager created." << std::endl;
+        
+        if (dbManager->isConnected()) {
+            std::cout << "Database connected successfully!" << std::endl;
+            dbManager->initializeTables();
+            
+            // Load groups from database
+            groups = dbManager->getAllGroups();
+            std::cout << "✅ Loaded " << groups.size() << " study groups from database" << std::endl;
+        } else {
+            std::cout << "❌ Database connection failed. Running in offline mode." << std::endl;
+            // Add some sample groups for offline mode
+            groups.push_back({"Sample Math Group", "Basic math tutoring", "math,algebra", "Local University", 5});
+            groups.push_back({"Science Study Circle", "Biology and chemistry", "biology,chemistry,science", "Community College", 8});
+        }
+        
+    } catch (const std::exception& e) {
+        std::cout << "❌ Database initialization failed: " << e.what() << std::endl;
+        std::cout << "Running in offline mode with sample data." << std::endl;
+        dbManager = nullptr;
+        
+        // Add sample groups for offline mode
+        groups.push_back({"Sample Math Group", "Basic math tutoring", "math,algebra", "Local University", 5});
+        groups.push_back({"Science Study Circle", "Biology and chemistry", "biology,chemistry,science", "Community College", 8});
+    }
+    
+    std::cout << "Database initialization complete." << std::endl;
+}
+
 void Application::run() {
+    std::cout << "Starting main application loop..." << std::endl;
+    
     while (window.isOpen()) {
         handleEvents();
         update();
         render();
     }
+    
+    std::cout << "Application loop ended." << std::endl;
 }
 
-void Application::initializeSampleGroups() {
-    // STEM Groups
-    groups.push_back({"Advanced Calculus Study Circle", "Tackle multivariable calculus and differential equations", "calculus,mathematics,derivatives,integrals", "MIT", 8});
-    groups.push_back({"Linear Algebra Workshop", "Matrix operations and vector spaces", "linear algebra,mathematics,matrices,vectors", "Stanford University", 12});
-    groups.push_back({"Organic Chemistry Lab", "Synthesis and reaction mechanisms", "chemistry,organic chemistry,lab,reactions", "Harvard University", 10});
-    groups.push_back({"Physics Problem Solvers", "Classical and quantum mechanics", "physics,mechanics,quantum,thermodynamics", "Caltech", 7});
-    groups.push_back({"Data Structures & Algorithms", "Coding interview prep and theory", "computer science,algorithms,programming,java,python", "UC Berkeley", 15});
-    groups.push_back({"Molecular Biology Research", "Genetics and cell biology", "biology,genetics,molecular biology,cell biology", "Yale University", 9});
-    groups.push_back({"Statistics & Data Analysis", "Statistical modeling and R programming", "statistics,data science,R,probability", "University of Chicago", 11});
-    groups.push_back({"Engineering Mechanics", "Statics and dynamics problems", "engineering,mechanics,statics,dynamics", "Georgia Tech", 13});
+std::vector<std::string> Application::parseSubjects(const std::string& subjects) {
+    std::vector<std::string> result;
+    std::string delimiter = ",";
+    size_t pos = 0;
+    std::string token;
+    std::string subjectsCopy = subjects;
     
-    // Liberal Arts Groups
-    groups.push_back({"Shakespeare Analysis Group", "Close reading of major works", "literature,english,shakespeare,poetry", "Columbia University", 8});
-    groups.push_back({"World History Seminar", "From ancient civilizations to modern times", "history,world history,ancient history,modern history", "Princeton University", 10});
-    groups.push_back({"Philosophy Discussion Circle", "Ethics, logic, and metaphysics", "philosophy,ethics,logic,metaphysics", "University of Pennsylvania", 7});
-    groups.push_back({"Creative Writing Workshop", "Fiction, poetry, and screenwriting", "writing,creative writing,poetry,fiction", "NYU", 12});
-    groups.push_back({"Art History Study Group", "Renaissance to contemporary movements", "art history,renaissance,modern art,contemporary art", "University of Michigan", 9});
-    groups.push_back({"Foreign Language Exchange", "Spanish, French, and German practice", "spanish,french,german,linguistics,language", "UCLA", 14});
+    while ((pos = subjectsCopy.find(delimiter)) != std::string::npos) {
+        token = subjectsCopy.substr(0, pos);
+        // Remove spaces
+        token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
+        if (!token.empty()) {
+            result.push_back(token);
+        }
+        subjectsCopy.erase(0, pos + delimiter.length());
+    }
+    if (!subjectsCopy.empty()) {
+        subjectsCopy.erase(std::remove_if(subjectsCopy.begin(), subjectsCopy.end(), ::isspace), subjectsCopy.end());
+        result.push_back(subjectsCopy);
+    }
     
-    // Business & Economics Groups
-    groups.push_back({"Microeconomics Study Session", "Supply, demand, and market analysis", "economics,microeconomics,markets,business", "Wharton School", 11});
-    groups.push_back({"Corporate Finance Workshop", "Valuation and investment strategies", "finance,corporate finance,investment,accounting", "University of Texas", 8});
-    groups.push_back({"Marketing Strategy Group", "Digital marketing and consumer behavior", "marketing,business,strategy,digital marketing", "Northwestern University", 10});
-    groups.push_back({"International Business Seminar", "Global trade and cultural studies", "business,international business,trade,culture", "Georgetown University", 9});
-    
-    // Social Sciences Groups
-    groups.push_back({"Psychology Research Methods", "Experimental design and statistics", "psychology,research methods,statistics,experiments", "University of Wisconsin", 12});
-    groups.push_back({"Sociology Theory Discussion", "Classical and contemporary theorists", "sociology,social theory,research,society", "University of California San Diego", 8});
-    groups.push_back({"Political Science Debate Club", "Current events and policy analysis", "political science,government,policy,debate", "George Washington University", 13});
-    groups.push_back({"Anthropology Field Methods", "Ethnography and cultural analysis", "anthropology,culture,ethnography,research", "University of Arizona", 7});
-    
-    // Pre-Professional Groups
-    groups.push_back({"MCAT Prep Intensive", "Biology, chemistry, and physics review", "MCAT,biology,chemistry,physics,pre-med", "Johns Hopkins University", 15});
-    groups.push_back({"LSAT Logic Games", "Analytical reasoning practice", "LSAT,logic,pre-law,reasoning,law school", "Duke University", 10});
-    groups.push_back({"GRE Quantitative Prep", "Math and analytical writing", "GRE,mathematics,analytical writing,graduate school", "University of Virginia", 11});
-    
-    // Specialized Fields
-    groups.push_back({"Environmental Science Lab", "Ecology and sustainability studies", "environmental science,ecology,sustainability,climate", "University of Colorado Boulder", 9});
-    groups.push_back({"Public Health Research", "Epidemiology and health policy", "public health,epidemiology,health policy,statistics", "Emory University", 8});
-    groups.push_back({"Music Theory & Composition", "Harmony, counterpoint, and analysis", "music,music theory,composition,harmony", "Juilliard School", 6});
-    groups.push_back({"Architecture Design Studio", "Spatial design and technical drawing", "architecture,design,drawing,spatial design", "MIT", 7});
+    return result;
 }
 
 void Application::clearTextBoxes() {
@@ -78,6 +115,7 @@ void Application::clearTextBoxes() {
 
 void Application::setupCurrentPage() {
     clearTextBoxes();
+    showMessageText = false;
     
     switch (currentPage) {
         case PageType::LOGIN:
@@ -96,27 +134,25 @@ void Application::setupCurrentPage() {
 }
 
 void Application::setupLoginPage() {
-    // Title
     titleText.setFont(font);
     titleText.setString("Login");
     titleText.setCharacterSize(32);
     titleText.setFillColor(sf::Color::White);
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 50);
+    centerText(titleText, 100);
     
-    // Text boxes
-    textBoxes.push_back(new TextBox(250, 150, 300, 30, "Username:", font));
-    textBoxes.push_back(new TextBox(250, 220, 300, 30, "Password:", font));
+    textBoxes.push_back(new TextBox(250, 180, 300, 35, "Username:", font));
+    textBoxes.push_back(new TextBox(250, 250, 300, 35, "Password:", font));
     
-    // Buttons
-    createButton(325, 300, 150, 40, "Login", sf::Color::Blue);
-    createButton(325, 360, 150, 40, "Register", sf::Color::Green);
+    createButton(325, 320, 150, 40, "Login", sf::Color::Blue);
+    createButton(325, 380, 150, 40, "Register", sf::Color::Green);
     
-    // Message text
+    showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
     messageText.setFillColor(sf::Color::Red);
-    messageText.setPosition(250, 420);
+    messageText.setPosition(250, 450);
+    messageText.setString("");
 }
 
 void Application::setupRegistrationPage() {
@@ -127,49 +163,52 @@ void Application::setupRegistrationPage() {
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 30);
     
-    textBoxes.push_back(new TextBox(250, 100, 300, 30, "Username:", font));
-    textBoxes.push_back(new TextBox(250, 150, 300, 30, "Email:", font));
-    textBoxes.push_back(new TextBox(250, 200, 300, 30, "Password:", font));
-    textBoxes.push_back(new TextBox(250, 250, 300, 30, "Confirm Password:", font));
-    textBoxes.push_back(new TextBox(250, 300, 300, 30, "Full Name:", font));
-    textBoxes.push_back(new TextBox(250, 350, 300, 30, "Age:", font));
+    textBoxes.push_back(new TextBox(250, 120, 300, 35, "Full Name:", font));
+    textBoxes.push_back(new TextBox(250, 185, 300, 35, "Graduation Year:", font));
+    textBoxes.push_back(new TextBox(250, 250, 300, 35, "Subjects (comma separated):", font));
+    textBoxes.push_back(new TextBox(250, 315, 300, 35, "Username:", font));
+    textBoxes.push_back(new TextBox(250, 380, 300, 35, "Password:", font));
+    textBoxes.push_back(new TextBox(250, 445, 300, 35, "Confirm Password:", font));
     
-    createButton(275, 420, 100, 40, "Register", sf::Color::Blue);
-    createButton(425, 420, 100, 40, "Back", sf::Color(128, 128, 128));
+    createButton(275, 510, 100, 40, "Register", sf::Color::Blue);
+    createButton(425, 510, 100, 40, "Back", sf::Color(128, 128, 128));
     
+    showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
     messageText.setFillColor(sf::Color::Red);
-    messageText.setPosition(250, 480);
+    messageText.setPosition(250, 570);
+    messageText.setString("");
 }
 
 void Application::setupProfilePage() {
     titleText.setFont(font);
-    titleText.setString("Profile - " + currentUser.username);
+    titleText.setString("Profile - " + currentUser.name);
     titleText.setCharacterSize(28);
     titleText.setFillColor(sf::Color::White);
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 30);
+    centerText(titleText, 80);
     
-    textBoxes.push_back(new TextBox(250, 100, 300, 30, "Subjects/Topics (comma separated):", font));
-    textBoxes.push_back(new TextBox(250, 150, 300, 30, "School/University:", font));
+    textBoxes.push_back(new TextBox(250, 150, 300, 35, "Subjects (comma separated):", font));
+    textBoxes.push_back(new TextBox(250, 220, 300, 35, "School/University:", font));
     
-    // Pre-fill with existing data
-    if (!currentUser.interests.empty()) {
-        textBoxes[0]->setContent(currentUser.interests);
+    if (!currentUser.subjects.empty()) {
+        textBoxes[0]->setContent(currentUser.subjects);
     }
     if (!currentUser.location.empty()) {
         textBoxes[1]->setContent(currentUser.location);
     }
     
-    createButton(250, 220, 120, 40, "Save Profile", sf::Color::Blue);
-    createButton(380, 220, 120, 40, "Find Groups", sf::Color::Green);
-    createButton(510, 220, 90, 40, "Logout", sf::Color::Red);
+    createButton(250, 290, 120, 40, "Save Profile", sf::Color::Blue);
+    createButton(380, 290, 120, 40, "Find Groups", sf::Color::Green);
+    createButton(510, 290, 90, 40, "Logout", sf::Color::Red);
     
+    showMessageText = true;
     messageText.setFont(font);
     messageText.setCharacterSize(16);
     messageText.setFillColor(sf::Color::Green);
-    messageText.setPosition(250, 280);
+    messageText.setPosition(250, 360);
+    messageText.setString("");
 }
 
 void Application::setupGroupMatchingPage() {
@@ -178,11 +217,11 @@ void Application::setupGroupMatchingPage() {
     titleText.setCharacterSize(28);
     titleText.setFillColor(sf::Color::White);
     titleText.setStyle(sf::Text::Bold);
-    centerText(titleText, 30);
+    centerText(titleText, 40);
     
-    createButton(350, 500, 100, 40, "Back", sf::Color(128, 128, 128));
+    createButton(350, 520, 100, 40, "Back", sf::Color(128, 128, 128));
     
-    // Display matched groups (will be rendered separately)
+    showMessageText = false;
 }
 
 void Application::createButton(float x, float y, float width, float height, const std::string& text, sf::Color color) {
@@ -218,12 +257,10 @@ void Application::handleEvents() {
         if (event.type == sf::Event::Closed)
             window.close();
         
-        // Handle text box events
         for (auto* textBox : textBoxes) {
             textBox->handleEvent(event);
         }
         
-        // Handle button clicks
         if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             handleButtonClicks(mousePos);
@@ -263,12 +300,10 @@ void Application::handleLoginButtons(size_t buttonIndex) {
         std::string username = textBoxes[0]->getContent();
         std::string password = textBoxes[1]->getContent();
         
-        if (users.find(username) != users.end() && users[username].password == password) {
-            currentUser = users[username];
+        if (dbManager && dbManager->authenticateUser(username, password, currentUser)) {
             isLoggedIn = true;
             currentPage = PageType::PROFILE;
             setupCurrentPage();
-            messageText.setString("");
         } else {
             messageText.setString("Invalid username or password!");
         }
@@ -280,14 +315,14 @@ void Application::handleLoginButtons(size_t buttonIndex) {
 
 void Application::handleRegistrationButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Register
-        std::string username = textBoxes[0]->getContent();
-        std::string email = textBoxes[1]->getContent();
-        std::string password = textBoxes[2]->getContent();
-        std::string confirmPass = textBoxes[3]->getContent();
-        std::string name = textBoxes[4]->getContent();
-        std::string ageStr = textBoxes[5]->getContent();
+        std::string name = textBoxes[0]->getContent();
+        std::string gradYearStr = textBoxes[1]->getContent();
+        std::string subjects = textBoxes[2]->getContent();
+        std::string username = textBoxes[3]->getContent();
+        std::string password = textBoxes[4]->getContent();
+        std::string confirmPass = textBoxes[5]->getContent();
         
-        if (username.empty() || email.empty() || password.empty() || name.empty()) {
+        if (name.empty() || gradYearStr.empty() || subjects.empty() || username.empty() || password.empty()) {
             messageText.setString("Please fill all fields!");
             return;
         }
@@ -297,32 +332,24 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             return;
         }
         
-        if (users.find(username) != users.end()) {
-            messageText.setString("Username already exists!");
-            return;
-        }
-        
-        int age = 0;
+        int gradYear = 0;
         try {
-            age = std::stoi(ageStr);
+            gradYear = std::stoi(gradYearStr);
         } catch (...) {
-            messageText.setString("Invalid age!");
+            messageText.setString("Invalid graduation year!");
             return;
         }
         
-        // Create new user
-        User newUser;
-        newUser.username = username;
-        newUser.email = email;
-        newUser.password = password;
-        newUser.name = name;
-        newUser.age = age;
-        
-        users[username] = newUser;
-        currentUser = newUser;
-        isLoggedIn = true;
-        currentPage = PageType::PROFILE;
-        setupCurrentPage();
+        if (dbManager && dbManager->createProfileAndLogin(name, gradYear, subjects, username, password)) {
+            // After successful registration, log them in
+            if (dbManager->authenticateUser(username, password, currentUser)) {
+                isLoggedIn = true;
+                currentPage = PageType::PROFILE;
+                setupCurrentPage();
+            }
+        } else {
+            messageText.setString("Registration failed! Username might already exist.");
+        }
         
     } else if (buttonIndex == 1) { // Back
         currentPage = PageType::LOGIN;
@@ -332,20 +359,29 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
 
 void Application::handleProfileButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Save Profile
-        currentUser.interests = textBoxes[0]->getContent();
+        currentUser.subjects = textBoxes[0]->getContent();
         currentUser.location = textBoxes[1]->getContent();
-        users[currentUser.username] = currentUser;
-        messageText.setString("Profile saved successfully!");
+        
+        if (dbManager && dbManager->updateUserProfile(currentUser)) {
+            messageText.setString("Profile saved successfully!");
+        } else {
+            messageText.setString("Failed to save profile!");
+        }
         
     } else if (buttonIndex == 1) { // Find Groups
-        if (currentUser.interests.empty()) {
-            messageText.setString("Please add interests first!");
+        if (currentUser.subjects.empty()) {
+            messageText.setString("Please add subjects first!");
         } else {
+            // Refresh groups from database before matching
+            if (dbManager) {
+                groups = dbManager->getAllGroups();
+            }
             currentPage = PageType::GROUP_MATCHING;
             setupCurrentPage();
         }
     } else if (buttonIndex == 2) { // Logout
         isLoggedIn = false;
+        currentUser = User{}; // Reset current user
         currentPage = PageType::LOGIN;
         setupCurrentPage();
     }
@@ -359,37 +395,24 @@ void Application::handleGroupMatchingButtons(size_t buttonIndex) {
 }
 
 std::vector<Group> Application::getMatchedGroups() {
-    std::vector<Group> matches;
-    std::vector<std::string> userInterests;
-    
-    // Parse user interests (now subjects)
-    std::string interests = currentUser.interests;
-    std::string delimiter = ",";
-    size_t pos = 0;
-    std::string token;
-    while ((pos = interests.find(delimiter)) != std::string::npos) {
-        token = interests.substr(0, pos);
-        // Remove spaces
-        token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
-        userInterests.push_back(token);
-        interests.erase(0, pos + delimiter.length());
-    }
-    if (!interests.empty()) {
-        interests.erase(std::remove_if(interests.begin(), interests.end(), ::isspace), interests.end());
-        userInterests.push_back(interests);
-    }
-    
-    // Find matching groups
-    for (const auto& group : groups) {
-        for (const auto& userInterest : userInterests) {
-            if (group.interests.find(userInterest) != std::string::npos) {
-                matches.push_back(group);
-                break;
+    if (dbManager) {
+        std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
+        return dbManager->getMatchingGroups(userSubjects);
+    } else {
+        // Fallback to local matching if database is unavailable
+        std::vector<Group> matches;
+        std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
+        
+        for (const auto& group : groups) {
+            for (const auto& userSubject : userSubjects) {
+                if (group.subjects.find(userSubject) != std::string::npos) {
+                    matches.push_back(group);
+                    break;
+                }
             }
         }
+        return matches;
     }
-    
-    return matches;
 }
 
 void Application::update() {
@@ -401,24 +424,21 @@ void Application::update() {
 void Application::render() {
     window.clear(sf::Color::Black);
     
-    // Draw title
     window.draw(titleText);
     
-    // Draw text boxes
     for (auto* textBox : textBoxes) {
         textBox->draw(window);
     }
     
-    // Draw buttons
     for (size_t i = 0; i < buttons.size(); ++i) {
         window.draw(buttons[i]);
         window.draw(buttonTexts[i]);
     }
     
-    // Draw message
-    window.draw(messageText);
+    if (showMessageText) {
+        window.draw(messageText);
+    }
     
-    // Special rendering for group matching page
     if (currentPage == PageType::GROUP_MATCHING) {
         renderGroupMatches();
     }
@@ -428,12 +448,11 @@ void Application::render() {
 
 void Application::renderGroupMatches() {
     auto matches = getMatchedGroups();
-    float yPos = 80;
+    float yPos = 90;
     
     for (size_t i = 0; i < matches.size() && i < 5; ++i) {
         const auto& group = matches[i];
         
-        // Group name
         sf::Text groupName;
         groupName.setFont(font);
         groupName.setString(group.name + " (" + std::to_string(group.memberCount) + " members)");
@@ -442,7 +461,6 @@ void Application::renderGroupMatches() {
         groupName.setPosition(50, yPos);
         window.draw(groupName);
         
-        // Group description
         sf::Text groupDesc;
         groupDesc.setFont(font);
         groupDesc.setString(group.description);
@@ -451,16 +469,15 @@ void Application::renderGroupMatches() {
         groupDesc.setPosition(70, yPos + 25);
         window.draw(groupDesc);
         
-        // Location and subjects
         sf::Text groupInfo;
         groupInfo.setFont(font);
-        groupInfo.setString("School: " + group.location + " | Subjects: " + group.interests);
+        groupInfo.setString("School: " + group.location + " | Subjects: " + group.subjects);
         groupInfo.setCharacterSize(12);
         groupInfo.setFillColor(sf::Color::Cyan);
         groupInfo.setPosition(70, yPos + 45);
         window.draw(groupInfo);
         
-        yPos += 80;
+        yPos += 85;
     }
     
     if (matches.empty()) {
@@ -469,7 +486,7 @@ void Application::renderGroupMatches() {
         noMatches.setString("No matching study groups found. Try updating your subjects!");
         noMatches.setCharacterSize(16);
         noMatches.setFillColor(sf::Color::Red);
-        noMatches.setPosition(150, 150);
+        noMatches.setPosition(150, 200);
         window.draw(noMatches);
     }
 }
