@@ -696,15 +696,8 @@ void Application::render() {
     for (auto* textBox : textBoxes) {
         textBox->draw(window);
     }
-     
-    for (auto* dropdown : dropdownMenus) {
-        dropdown->draw(window);
-    }
     
-    for (auto* multiDropdown : multiSelectDropdowns) {
-        multiDropdown->draw(window);
-    }
-	
+    // Draw buttons before dropdowns so dropdowns appear on top
     for (size_t i = 0; i < buttons.size(); ++i) {
         window.draw(buttons[i]);
         window.draw(buttonTexts[i]);
@@ -716,6 +709,15 @@ void Application::render() {
     
     if (currentPage == PageType::GROUP_MATCHING) {
         renderGroupMatches();
+    }
+    
+    // Draw dropdowns LAST so they appear on top of everything else
+    for (auto* dropdown : dropdownMenus) {
+        dropdown->draw(window);
+    }
+    
+    for (auto* multiDropdown : multiSelectDropdowns) {
+        multiDropdown->draw(window);
     }
     
     window.display();
