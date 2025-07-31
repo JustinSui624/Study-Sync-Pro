@@ -3,7 +3,7 @@
 #include <string>
 
 int main() {
-    std::string name = "Emma Johnson";
+    std::string name = "Emma John";
     int gradYear = 2026;
     std::string subjects = "Math, Biology";
     std::string username = "emma_j";
