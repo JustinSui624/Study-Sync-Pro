@@ -22,7 +22,7 @@ void createProfileAndLogin(
     const std::string& password
 ) {
     // Connect to database
-    PGconn* conn = PQconnectdb("dbname=your_db user=your_user password=your_password host=localhost");
+    PgConnector db("postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres");
 
     if (PQstatus(conn) != CONNECTION_OK) {
         std::cerr << "Connection failed: " << PQerrorMessage(conn);
