@@ -2,21 +2,80 @@
 #include <iostream>
 
 int main() {
-    try {
-        PgConnector db("postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres");
+    std::string name = "Emma Johnson";
+    int gradYear = 2026;
+    std::string subjects = "Math, Biology";
+    std::string username = "emma_j";
+    std::string password = "securepass123";
 
-        PGresult* res = db.exec("SELECT version()");
-        std::cout << "PostgreSQL version: " << PQgetvalue(res, 0, 0) << "\n";
-        PQclear(res);
+    createProfileAndLogin(name, gradYear, subjects, username, password);
 
-        std::vector<const char*> params = { "5", "7" };
-        PGresult* res2 = db.execParams("SELECT $1::int + $2::int AS sum", params);
-        std::cout << "Sum: " << PQgetvalue(res2, 0, 0) << "\n";
-        PQclear(res2);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
-    }
     return 0;
+}
+
+void createProfileAndLogin(
+    const std::string& name,
+    int gradYear,
+    const std::string& subjects,
+    const std::string& username,
+    const std::string& password
+) {
+    // Connect to database
+    PGconn* conn = PQconnectdb("dbname=your_db user=your_user password=your_password host=localhost");
+
+    if (PQstatus(conn) != CONNECTION_OK) {
+        std::cerr << "Connection failed: " << PQerrorMessage(conn);
+        PQfinish(conn);
+        return;
+    }
+
+    // Begin transaction
+    PGresult* res = PQexec(conn, "BEGIN");
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        std::cerr << "BEGIN failed\n";
+        PQclear(res);
+        PQfinish(conn);
+        return;
+    }
+    PQclear(res);
+
+    // Insert into profile
+    std::string profileQuery =
+        "INSERT INTO profile (name, grad_year, subjects) "
+        "VALUES ('" + name + "', " + std::to_string(gradYear) + ", '" + subjects + "') RETURNING id;";
+
+    res = PQexec(conn, profileQuery.c_str());
+
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        std::cerr << "Profile insertion failed: " << PQerrorMessage(conn);
+        PQclear(res);
+        PQexec(conn, "ROLLBACK");
+        PQfinish(conn);
+        return;
+    }
+
+    // Get the returned profile_id
+    std::string profile_id = PQgetvalue(res, 0, 0);
+    PQclear(res);
+
+    // Insert into login
+    std::string loginQuery =
+        "INSERT INTO login (username, password, profile_id) "
+        "VALUES ('" + username + "', '" + password + "', " + profile_id + ");";
+
+    res = PQexec(conn, loginQuery.c_str());
+
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        std::cerr << "Login insertion failed: " << PQerrorMessage(conn);
+        PQclear(res);
+        PQexec(conn, "ROLLBACK");
+        PQfinish(conn);
+        return;
+    }
+    PQclear(res);
+
+    PQexec(conn, "COMMIT");
+    PQfinish(conn);
+
+    std::cout << "✅ Profile and login created successfully!\n";
 }
