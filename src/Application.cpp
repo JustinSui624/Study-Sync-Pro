@@ -53,6 +53,7 @@ void Application::initializeDatabase() {
             group.subjects = group.name; // Use group name for subject matching
             group.location = "Various Locations";
             group.memberCount = 5 + (i % 10); // Mock member count
+            group.id = -1;
             groups.push_back(group);
         }
         PQclear(res);
@@ -60,24 +61,87 @@ void Application::initializeDatabase() {
         if (groups.empty()) {
             std::cout << "No groups found in database, using sample data" << std::endl;
             // Fallback to sample data
-            groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
-            groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
-            groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
+            Group g1;
+            g1.name = "Algebra Buddies";
+            g1.description = "Group focused on Algebra help and practice";
+            g1.subjects = "algebra,math";
+            g1.location = "Study Hall A";
+            g1.memberCount = 8;
+            g1.id = -1;
+            groups.push_back(g1);
+            
+            Group g2;
+            g2.name = "Bio Crash Course";
+            g2.description = "Study group for AP Biology review sessions";
+            g2.subjects = "biology,science";
+            g2.location = "Library Room 202";
+            g2.memberCount = 12;
+            g2.id = -1;
+            groups.push_back(g2);
+            
+            Group g3;
+            g3.name = "CS101 Legends";
+            g3.description = "Intro to programming and data structures";
+            g3.subjects = "programming,computer science";
+            g3.location = "Computer Lab";
+            g3.memberCount = 15;
+            g3.id = -1;
+            groups.push_back(g3);
         }
         
     } catch (const std::exception& e) {
         std::cout << "❌ Database connection failed: " << e.what() << std::endl;
         
         // Fallback to sample data
-        groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
-        groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
-        groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
-        groups.push_back({"English Essay Editors", "Peer editing group for literature assignments", "english,literature", "English Department", 6});
-        groups.push_back({"SAT Prep Circle", "Preparing for SAT with weekly practice tests", "math,english,test prep", "Testing Center", 10});
+        Group g1;
+        g1.name = "Algebra Buddies";
+        g1.description = "Group focused on Algebra help and practice";
+        g1.subjects = "algebra,math";
+        g1.location = "Study Hall A";
+        g1.memberCount = 8;
+        g1.id = -1;
+        groups.push_back(g1);
+        
+        Group g2;
+        g2.name = "Bio Crash Course";
+        g2.description = "Study group for AP Biology review sessions";
+        g2.subjects = "biology,science";
+        g2.location = "Library Room 202";
+        g2.memberCount = 12;
+        g2.id = -1;
+        groups.push_back(g2);
+        
+        Group g3;
+        g3.name = "CS101 Legends";
+        g3.description = "Intro to programming and data structures";
+        g3.subjects = "programming,computer science";
+        g3.location = "Computer Lab";
+        g3.memberCount = 15;
+        g3.id = -1;
+        groups.push_back(g3);
+        
+        Group g4;
+        g4.name = "English Essay Editors";
+        g4.description = "Peer editing group for literature assignments";
+        g4.subjects = "english,literature";
+        g4.location = "English Department";
+        g4.memberCount = 6;
+        g4.id = -1;
+        groups.push_back(g4);
+        
+        Group g5;
+        g5.name = "SAT Prep Circle";
+        g5.description = "Preparing for SAT with weekly practice tests";
+        g5.subjects = "math,english,test prep";
+        g5.location = "Testing Center";
+        g5.memberCount = 10;
+        g5.id = -1;
+        groups.push_back(g5);
     }
     
     std::cout << "Loaded " << groups.size() << " study groups" << std::endl;
 }
+
 
 void Application::run() {
     std::cout << "Starting main application loop..." << std::endl;
