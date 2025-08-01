@@ -198,6 +198,8 @@ void Application::clearTextBoxes() {
     buttons.clear();
     buttonTexts.clear();
     labels.clear();
+    buttonDefaultColors.clear();  // Add this line
+    buttonHoverStates.clear();   // Add this line
 }
 
 void Application::setupCurrentPage() {
@@ -238,6 +240,8 @@ void Application::setupLoginPage() {
     
     textBoxes.push_back(new TextBox(350, 240, 300, 45, "Username:", font));
     textBoxes.push_back(new TextBox(350, 320, 300, 45, "Password:", font));
+    
+    textBoxes[1]->setPasswordMode(true); // Set password mode for password field
     
     createButton(400, 400, 200, 50, "Login", sf::Color(64, 156, 255));
     createButton(400, 470, 200, 50, "Create Account", sf::Color(34, 197, 94));
@@ -299,7 +303,10 @@ void Application::setupRegistrationPage() {
     textBoxes.push_back(new TextBox(350, startY + 3 * spacing, 300, 45, "Username:", font));
     textBoxes.push_back(new TextBox(350, startY + 4 * spacing, 300, 45, "Password:", font));
     textBoxes.push_back(new TextBox(350, startY + 5 * spacing, 300, 45, "Confirm Password:", font));
-    
+
+    textBoxes[3]->setPasswordMode(true);  // Password field
+    textBoxes[4]->setPasswordMode(true);  // Confirm Password field
+
     createButton(350, startY + 6 * spacing + 30, 140, 50, "Register", sf::Color(34, 197, 94));
     createButton(510, startY + 6 * spacing + 30, 140, 50, "Back", sf::Color(107, 114, 128));
     
@@ -400,6 +407,10 @@ void Application::createButton(float x, float y, float width, float height, cons
     button.setOutlineThickness(0); // Remove outline for modern look
     buttons.push_back(button);
     
+    // Store default color for hover effects
+    buttonDefaultColors.push_back(color);
+    buttonHoverStates.push_back(false);
+    
     sf::Text buttonText;
     buttonText.setFont(font);
     buttonText.setString(text);
@@ -441,6 +452,12 @@ void Application::handleEvents() {
         if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             handleButtonClicks(mousePos);
+        }
+        
+        // Add mouse movement handling for hover effects
+        if (event.type == sf::Event::MouseMoved) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            handleMouseMove(mousePos);
         }
     }
 }
@@ -697,6 +714,28 @@ void Application::handleGroupMatchingButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Back
         currentPage = PageType::PROFILE;
         setupCurrentPage();
+    }
+}
+
+void Application::handleMouseMove(sf::Vector2i mousePos) {
+    for (size_t i = 0; i < buttons.size(); ++i) {
+        sf::FloatRect buttonBounds = buttons[i].getGlobalBounds();
+        if (buttonBounds.contains(static_cast<float>(mousePos.x), 
+                                  static_cast<float>(mousePos.y))) {
+            if (!buttonHoverStates[i]) {
+                buttonHoverStates[i] = true;
+                // Lighten the color on hover
+                sf::Color current = buttonDefaultColors[i];
+                buttons[i].setFillColor(sf::Color(
+                    std::min(255, current.r + 40),
+                    std::min(255, current.g + 40),
+                    std::min(255, current.b + 40)
+                ));
+            }
+        } else if (buttonHoverStates[i]) {
+            buttonHoverStates[i] = false;
+            buttons[i].setFillColor(buttonDefaultColors[i]);
+        }
     }
 }
 
