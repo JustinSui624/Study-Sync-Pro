@@ -10,8 +10,10 @@ private:
     sf::Text text;
     sf::Text label;
     std::string content;
+    std::string displayContent;  // What to show (with asterisks if password)
     bool isActive;
     bool showCursor;
+    bool isPassword;  // New member for password mode
     sf::Clock cursorClock;
     
 public:
@@ -22,7 +24,8 @@ public:
     void draw(sf::RenderWindow& window);
     std::string getContent() const;
     void setActive(bool active);
-    void setContent(const std::string& content); // Added for pre-filling text boxes
+    void setContent(const std::string& content);
+    void setPasswordMode(bool passwordMode);  // New method
 };
 
 #endif
