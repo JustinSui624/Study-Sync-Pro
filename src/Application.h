@@ -543,6 +543,10 @@ private:
     std::vector<sf::Text> buttonTexts;
     std::vector<sf::Text> labels;
     
+    // Button hover effects
+    std::vector<sf::Color> buttonDefaultColors;
+    std::vector<bool> buttonHoverStates;
+    
     User currentUser;
     std::vector<Group> groups;
     
@@ -564,6 +568,7 @@ private:
     void handleRegistrationButtons(size_t buttonIndex);
     void handleProfileButtons(size_t buttonIndex);
     void handleGroupMatchingButtons(size_t buttonIndex);
+    void handleMouseMove(sf::Vector2i mousePos);
     
     std::vector<Group> getMatchedGroups();
     
