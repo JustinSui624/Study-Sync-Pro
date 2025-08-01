@@ -25,7 +25,9 @@ TextBox::TextBox(float x, float y, float width, float height, const std::string&
         
     this->isActive = false;
     this->showCursor = true;
+    this->isPassword = false;  // Initialize password mode to false
     this->content = "";
+    this->displayContent = "";  // Initialize display content
 }
 
 void TextBox::handleEvent(const sf::Event& event) {
@@ -69,7 +71,13 @@ void TextBox::update() {
 }
 
 void TextBox::updateDisplayText() {
-    std::string displayText = content;
+    if (isPassword && !content.empty()) {
+        displayContent = std::string(content.length(), '*');
+    } else {
+        displayContent = content;
+    }
+    
+    std::string displayText = displayContent;
     if (this->isActive && this->showCursor) {
         displayText += "|";
     }
@@ -93,5 +101,10 @@ void TextBox::setActive(bool active) {
 
 void TextBox::setContent(const std::string& content) {
     this->content = content;
+    updateDisplayText();
+}
+
+void TextBox::setPasswordMode(bool passwordMode) {
+    this->isPassword = passwordMode;
     updateDisplayText();
 }
