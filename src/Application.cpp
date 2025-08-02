@@ -437,6 +437,28 @@ void Application::handleEvents() {
         if (event.type == sf::Event::Closed)
             window.close();
         
+        // Tab navigation
+        if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::Tab) {
+                // Find current active textbox
+                int currentActive = -1;
+                for (size_t i = 0; i < textBoxes.size(); ++i) {
+                    if (textBoxes[i]->getIsActive()) {  // Changed from isActive to getIsActive()
+                        currentActive = i;
+                        textBoxes[i]->setActive(false);
+                        break;
+                    }
+                }
+                
+                // Move to next textbox
+                if (currentActive >= 0 && currentActive < static_cast<int>(textBoxes.size()) - 1) {
+                    textBoxes[currentActive + 1]->setActive(true);
+                } else if (textBoxes.size() > 0) {
+                    textBoxes[0]->setActive(true);
+                }
+            }
+        }
+        
         for (auto* textBox : textBoxes) {
             textBox->handleEvent(event);
         }
@@ -461,6 +483,7 @@ void Application::handleEvents() {
         }
     }
 }
+
 
 void Application::handleButtonClicks(sf::Vector2i mousePos) {
     for (size_t i = 0; i < buttons.size(); ++i) {
