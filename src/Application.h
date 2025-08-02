@@ -549,6 +549,8 @@ private:
     
     User currentUser;
     std::vector<Group> groups;
+
+    int activeTextBoxIndex;
     
     void initializeDatabase();
     void clearTextBoxes();
