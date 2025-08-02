@@ -25,7 +25,8 @@ public:
     std::string getContent() const;
     void setActive(bool active);
     void setContent(const std::string& content);
-    void setPasswordMode(bool passwordMode);  // New method
+    void setPasswordMode(bool passwordMode);
+    bool getIsActive() const { return isActive; }
 };
 
 #endif
