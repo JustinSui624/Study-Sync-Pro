@@ -3,7 +3,7 @@
 
 
 Application::Application() : window(sf::VideoMode(1000, 700), "Study Sync Pro"), 
-                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false), selectedGroupIndex(-1) {
+                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false), selectedGroupName("") {
     std::cout << "Starting Study Sync Pro application..." << std::endl;
     
     if (!font.loadFromFile("./fonts/arial.ttf")) {
@@ -35,13 +35,12 @@ void Application::initializeDatabase() {
     std::cout << "Testing database connection..." << std::endl;
     
     try {
-        // Test your exact connection string
         std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
         
         PgConnector db(connStr);
         
-        // Try to get groups from your actual database
-        PGresult* res = db.exec("SELECT group_name, description, contact FROM groups");
+        // Get groups from database
+        PGresult* res = db.exec("SELECT group_name, description, subjects, contact FROM groups");
         int groupCount = PQntuples(res);
         
         std::cout << "Database connected! Found " << groupCount << " groups in database" << std::endl;
@@ -49,36 +48,21 @@ void Application::initializeDatabase() {
         // Load actual groups from database
         for (int i = 0; i < groupCount; i++) {
             Group group;
-            group.name = PQgetvalue(res, i, 0);
-            group.description = PQgetvalue(res, i, 1) ? PQgetvalue(res, i, 1) : "";
-			group.contactCell = PQgetvalue(res, i, 2) ? PQgetvalue(res, i, 2) : "No contact available";  // contact
-            group.subjects = group.name; // Use group name for subject matching
-            group.location = "Various Locations";
-            group.memberCount = 5 + (i % 10); // Mock member count
+            group.name = PQgetvalue(res, i, 0);           // group_name (column 0)
+            group.description = PQgetvalue(res, i, 1) ? PQgetvalue(res, i, 1) : "";  // description (column 1)
+            group.subjects = PQgetvalue(res, i, 2) ? PQgetvalue(res, i, 2) : "";     // subjects (column 2) 
+            group.contactCell = PQgetvalue(res, i, 3) ? PQgetvalue(res, i, 3) : "No contact available";  // contact (column 3)
+            group.location = "Various Locations";  // You could add this to your database table if needed
             groups.push_back(group);
         }
         PQclear(res);
         
-        if (groups.empty()) {
-            std::cout << "No groups found in database, using sample data" << std::endl;
-            // Fallback to sample data
-            groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
-            groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
-            groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
-        }
+        std::cout << "Loaded " << groups.size() << " study groups from database" << std::endl;
         
     } catch (const std::exception& e) {
-        std::cout << "❌ Database connection failed: " << e.what() << std::endl;
-        
-        // Fallback to sample data
-        groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
-        groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
-        groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
-        groups.push_back({"English Essay Editors", "Peer editing group for literature assignments", "english,literature", "English Department", 6});
-        groups.push_back({"SAT Prep Circle", "Preparing for SAT with weekly practice tests", "math,english,test prep", "Testing Center", 10});
+        std::cout << "Database connection failed: " << e.what() << std::endl;
+        std::cout << "No groups loaded - application will show empty group list" << std::endl;
     }
-    
-    std::cout << "Loaded " << groups.size() << " study groups" << std::endl;
 }
 
 void Application::run() {
@@ -95,23 +79,22 @@ void Application::run() {
 
 std::vector<std::string> Application::parseSubjects(const std::string& subjects) {
     std::vector<std::string> result;
-    std::string delimiter = ",";
-    size_t pos = 0;
-    std::string token;
-    std::string subjectsCopy = subjects;
     
-    while ((pos = subjectsCopy.find(delimiter)) != std::string::npos) {
-        token = subjectsCopy.substr(0, pos);
-        // Remove spaces
-        token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
-        if (!token.empty()) {
-            result.push_back(token);
-        }
-        subjectsCopy.erase(0, pos + delimiter.length());
+    if (subjects.empty()) {
+        return result;
     }
-    if (!subjectsCopy.empty()) {
-        subjectsCopy.erase(std::remove_if(subjectsCopy.begin(), subjectsCopy.end(), ::isspace), subjectsCopy.end());
-        result.push_back(subjectsCopy);
+    
+    std::stringstream ss(subjects);
+    std::string item;
+    
+    while (std::getline(ss, item, ',')) {
+        // Trim whitespace
+        item.erase(0, item.find_first_not_of(" \t\r\n"));
+        item.erase(item.find_last_not_of(" \t\r\n") + 1);
+        
+        if (!item.empty()) {
+            result.push_back(item);
+        }
     }
     
     return result;
@@ -157,6 +140,9 @@ void Application::setupCurrentPage() {
             break;
         case PageType::CONTACT:
             setupContactPage();
+			break;
+		case PageType::CREATE_GROUP:
+            setupCreateGroupPage();
             break;
     }
 }
@@ -297,22 +283,217 @@ void Application::setupGroupMatchingPage() {
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 60);
     
-    createButton(450, 600, 100, 50, "Back", sf::Color(107, 114, 128));
+    sf::Text subtitleText;
+    subtitleText.setFont(font);
+    subtitleText.setString("Groups matching your classes");
+    subtitleText.setCharacterSize(16);
+    subtitleText.setFillColor(sf::Color(160, 160, 160));
+    centerText(subtitleText, 100);
+    
+    createButton(300, 625, 120, 50, "Back", sf::Color(107, 114, 128));
+	createButton(580, 625, 140, 50, "Create Group", sf::Color(34, 197, 94));
+
+    // Calculate matches ONCE when entering this page
+    cachedMatches = getMatchedGroups();
     
     showMessageText = false;
 }
 
+void Application::setupCreateGroupPage() {
+    titleText.setFont(font);
+    titleText.setString("Create New Study Group");
+    titleText.setCharacterSize(36);
+    titleText.setFillColor(sf::Color(64, 156, 255));
+    titleText.setStyle(sf::Text::Bold);
+    centerText(titleText, 60);
+    
+    // Subtitle
+    sf::Text subtitleText;
+    subtitleText.setFont(font);
+    subtitleText.setString("Start your own study group");
+    subtitleText.setCharacterSize(16);
+    subtitleText.setFillColor(sf::Color(180, 180, 180));
+    centerText(subtitleText, 100);
+    
+    const float startY = 140;
+    const float spacing = 70;
+    
+    // Group name
+    textBoxes.push_back(new TextBox(350, startY, 300, 45, "Group Name:", font));
+    
+    // Group description
+    textBoxes.push_back(new TextBox(350, startY + spacing, 300, 45, "Description:", font));
+    
+    // Contact information
+    textBoxes.push_back(new TextBox(350, startY + 2 * spacing, 300, 45, "Contact (Phone/Email):", font));
+    
+    // Meeting location
+    textBoxes.push_back(new TextBox(350, startY + 3 * spacing, 300, 45, "Meeting Location:", font));
+    
+    // Subject selection
+    std::vector<std::string> subjects = {
+        "Mathematics", "Algebra", "Calculus", "Geometry", "Statistics",
+        "Science", "Biology", "Chemistry", "Physics", "Environmental Science",
+        "English", "Literature", "Creative Writing", "Grammar", "Public Speaking",
+        "History", "World History", "US History", "European History", "Government",
+        "Computer Science", "Programming", "Data Structures", "Algorithms", "Web Development",
+        "Art", "Music", "Theater", "Photography", "Graphic Design",
+        "Foreign Languages", "Spanish", "French", "German", "Chinese",
+        "Economics", "Psychology", "Sociology", "Philosophy", "Business"
+    };
+    
+    sf::Text subjectLabel;
+    subjectLabel.setFont(font);
+    subjectLabel.setString("Subjects (select multiple):");
+    subjectLabel.setCharacterSize(16);
+    subjectLabel.setFillColor(sf::Color::White);
+    subjectLabel.setPosition(350, startY + 4 * spacing - 25);
+    labels.push_back(subjectLabel);
+    
+    multiSelectDropdowns.push_back(new MultiSelectDropdown(350, startY + 4 * spacing, 300, 45, font, subjects, 5));
+    
+    // Buttons
+    createButton(350, startY + 5 * spacing + 30, 140, 50, "Create Group", sf::Color(34, 197, 94));
+    createButton(510, startY + 5 * spacing + 30, 140, 50, "Cancel", sf::Color(107, 114, 128));
+    
+    showMessageText = true;
+    messageText.setFont(font);
+    messageText.setCharacterSize(16);
+    messageText.setFillColor(sf::Color(239, 68, 68));
+    messageText.setPosition(350, startY + 6 * spacing + 30);
+    messageText.setString("");
+}
+
+void Application::handleButtonClicks(sf::Vector2i mousePos) {
+    // Check if any dropdown is open - if so, don't process button clicks
+    for (auto* multiDropdown : multiSelectDropdowns) {
+        if (multiDropdown->isDropdownOpen()) {  
+            return;  // Don't process button clicks while dropdown is open
+        }
+    }
+    
+    // Handle join buttons in group matching page first
+    if (currentPage == PageType::GROUP_MATCHING) {
+        handleJoinButtonClicks(mousePos);
+    }
+    
+    // Then handle regular buttons
+    for (size_t i = 0; i < buttons.size(); ++i) {
+        sf::FloatRect buttonBounds = buttons[i].getGlobalBounds();
+        if (buttonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+            handleButtonClick(i);
+            break;
+        }
+    }
+}
+
+void Application::handleButtonClick(size_t buttonIndex) {
+    switch (currentPage) {
+        case PageType::LOGIN:
+            handleLoginButtons(buttonIndex);
+            break;
+        case PageType::REGISTRATION:
+            handleRegistrationButtons(buttonIndex);
+            break;
+        case PageType::PROFILE:
+            handleProfileButtons(buttonIndex);
+            break;
+        case PageType::GROUP_MATCHING:
+            handleGroupMatchingButtons(buttonIndex);
+            break;
+        case PageType::CONTACT:
+            handleContactButtons(buttonIndex);
+            break;
+        case PageType::CREATE_GROUP: 
+            handleCreateGroupButtons(buttonIndex);
+            break;
+    }
+}
+
+void Application::handleGroupMatchingButtons(size_t buttonIndex) {
+    if (buttonIndex == 0) { // Back
+        currentPage = PageType::PROFILE;
+        setupCurrentPage();
+    } else if (buttonIndex == 1) { // Create Group
+        currentPage = PageType::CREATE_GROUP;
+        setupCurrentPage();
+    }
+}
+void Application::handleCreateGroupButtons(size_t buttonIndex) {
+    if (buttonIndex == 0) { // Create Group
+        std::string groupName = textBoxes[0]->getContent();
+        std::string description = textBoxes[1]->getContent();
+        std::string contact = textBoxes[2]->getContent();
+        std::string location = textBoxes[3]->getContent();
+        std::string subjects = multiSelectDropdowns[0]->getSelectedItemsString();
+        
+        // Validation
+        if (groupName.empty() || description.empty() || contact.empty() || location.empty() || subjects.empty()) {
+            messageText.setString("Please fill all fields!");
+            return;
+        }
+        
+        // Try to insert into database
+        try {
+            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+            PgConnector db(connStr);
+            
+            // FIX: Insert new group into database WITH SUBJECTS
+            std::vector<const char*> params = {groupName.c_str(), description.c_str(), subjects.c_str(), contact.c_str()};
+            PGresult* res = db.execParams(
+                "INSERT INTO groups (group_name, description, subjects, contact) VALUES ($1, $2, $3, $4)",
+                params
+            );
+            PQclear(res);
+            
+            // Add to local groups vector
+            groups.push_back({groupName, description, subjects, location, 1, contact});
+            
+            std::cout << "Group created successfully: " << groupName << std::endl;
+            messageText.setString("Group created successfully!");
+            messageText.setFillColor(sf::Color(34, 197, 94));
+            
+            // Clear form
+            for (auto* textBox : textBoxes) {
+                textBox->setContent("");
+            }
+            
+        } catch (const std::exception& e) {
+            std::cout << "Database insert failed: " << e.what() << std::endl;
+            
+            // Still add to local groups even if database fails
+            groups.push_back({groupName, description, subjects, location, 1, contact});
+            messageText.setString("Group created (local only - database error)");
+            messageText.setFillColor(sf::Color(255, 165, 0)); // Orange color
+        }
+        
+        // Go back to group matching page
+        currentPage = PageType::GROUP_MATCHING;
+        setupCurrentPage();
+        
+    } else if (buttonIndex == 1) { // Cancel
+        currentPage = PageType::GROUP_MATCHING;
+        setupCurrentPage();
+    }
+}
+
 void Application::setupContactPage() {
-    auto matches = getMatchedGroups();
-    if (selectedGroupIndex < 0 || selectedGroupIndex >= (int)matches.size()) {
-        // Invalid group index, go back to group matching
-        std::cout << "Invalid group index: " << selectedGroupIndex << ", matches size: " << matches.size() << std::endl;
+    // Find the selected group in cached matches
+    const Group* selectedGroup = nullptr;
+    for (const auto& group : cachedMatches) {
+        if (group.name == selectedGroupName) {
+            selectedGroup = &group;
+            break;
+        }
+    }
+    
+    if (selectedGroup == nullptr) {
+        // Group not found in current matches, go back to group matching
+        std::cout << "Group '" << selectedGroupName << "' not found in current matches" << std::endl;
         currentPage = PageType::GROUP_MATCHING;
         setupCurrentPage();
         return;
     }
-    
-    const Group& selectedGroup = matches[selectedGroupIndex];
     
     titleText.setFont(font);
     titleText.setString("Contact Information");
@@ -324,7 +505,7 @@ void Application::setupContactPage() {
     // Group name
     sf::Text groupNameText;
     groupNameText.setFont(font);
-    groupNameText.setString(selectedGroup.name);
+    groupNameText.setString(selectedGroup->name);
     groupNameText.setCharacterSize(28);
     groupNameText.setFillColor(sf::Color(245, 245, 245));
     groupNameText.setStyle(sf::Text::Bold);
@@ -343,9 +524,9 @@ void Application::setupContactPage() {
     // Contact cell number
     sf::Text contactNumber;
     contactNumber.setFont(font);
-    contactNumber.setString(selectedGroup.contactCell);
+    contactNumber.setString(selectedGroup->contactCell);
     contactNumber.setCharacterSize(24);
-    contactNumber.setFillColor(sf::Color(34, 197, 94)); // Green color for phone number
+    contactNumber.setFillColor(sf::Color(34, 197, 94));
     contactNumber.setStyle(sf::Text::Bold);
     contactNumber.setPosition(350, 240);
     labels.push_back(contactNumber);
@@ -361,7 +542,7 @@ void Application::setupContactPage() {
     
     sf::Text description;
     description.setFont(font);
-    description.setString(selectedGroup.description);
+    description.setString(selectedGroup->description);
     description.setCharacterSize(16);
     description.setFillColor(sf::Color(200, 200, 200));
     description.setPosition(350, 330);
@@ -378,28 +559,11 @@ void Application::setupContactPage() {
     
     sf::Text location;
     location.setFont(font);
-    location.setString(selectedGroup.location);
+    location.setString(selectedGroup->location);
     location.setCharacterSize(16);
     location.setFillColor(sf::Color(200, 200, 200));
     location.setPosition(350, 410);
     labels.push_back(location);
-    
-    // Member count
-    sf::Text memberLabel;
-    memberLabel.setFont(font);
-    memberLabel.setString("Current Members:");
-    memberLabel.setCharacterSize(18);
-    memberLabel.setFillColor(sf::Color(180, 180, 180));
-    memberLabel.setPosition(350, 460);
-    labels.push_back(memberLabel);
-    
-    sf::Text members;
-    members.setFont(font);
-    members.setString(std::to_string(selectedGroup.memberCount) + " active members");
-    members.setCharacterSize(16);
-    members.setFillColor(sf::Color(200, 200, 200));
-    members.setPosition(350, 490);
-    labels.push_back(members);
     
     createButton(450, 550, 100, 50, "Back", sf::Color(107, 114, 128));
     
@@ -458,32 +622,16 @@ void Application::handleEvents() {
     }
 }
 
-void Application::handleButtonClicks(sf::Vector2i mousePos) {
-    // Handle join buttons in group matching page first
-    if (currentPage == PageType::GROUP_MATCHING) {
-        handleJoinButtonClicks(mousePos);
-    }
-    
-    // Then handle regular buttons
-    for (size_t i = 0; i < buttons.size(); ++i) {
-        sf::FloatRect buttonBounds = buttons[i].getGlobalBounds();
-        if (buttonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            handleButtonClick(i);
-            break;
-        }
-    }
-}
 
 void Application::handleJoinButtonClicks(sf::Vector2i mousePos) {
-    auto matches = getMatchedGroups();
+    // Use cached matches instead of recalculating
     float yPos = 140;
     
-    for (size_t i = 0; i < matches.size() && i < 6; ++i) {
-        // Check if click is within the join button area for this group
-        sf::FloatRect joinButtonBounds(750, yPos + 20, 80, 30);
+    for (size_t i = 0; i < cachedMatches.size() && i < 6; ++i) {
+        sf::FloatRect joinButtonBounds(710, yPos + 20, 120, 30);
         if (joinButtonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            selectedGroupIndex = (int)i;
-            std::cout << "Join button clicked for group " << i << ": " << matches[i].name << std::endl;
+            selectedGroupName = cachedMatches[i].name;  // Use cached matches
+            std::cout << "Join button clicked for group: " << selectedGroupName << std::endl;
             currentPage = PageType::CONTACT;
             setupCurrentPage();
             return;
@@ -492,25 +640,6 @@ void Application::handleJoinButtonClicks(sf::Vector2i mousePos) {
     }
 }
 
-void Application::handleButtonClick(size_t buttonIndex) {
-    switch (currentPage) {
-        case PageType::LOGIN:
-            handleLoginButtons(buttonIndex);
-            break;
-        case PageType::REGISTRATION:
-            handleRegistrationButtons(buttonIndex);
-            break;
-        case PageType::PROFILE:
-            handleProfileButtons(buttonIndex);
-            break;
-        case PageType::GROUP_MATCHING:
-            handleGroupMatchingButtons(buttonIndex);
-            break;
-        case PageType::CONTACT:
-            handleContactButtons(buttonIndex);
-            break;
-    }
-}
 void Application::handleLoginButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Login
         std::string username = textBoxes[0]->getContent();
@@ -710,12 +839,6 @@ void Application::handleProfileButtons(size_t buttonIndex) {
     }
 }
 
-void Application::handleGroupMatchingButtons(size_t buttonIndex) {
-    if (buttonIndex == 0) { // Back
-        currentPage = PageType::PROFILE;
-        setupCurrentPage();
-    }
-}
 
 void Application::handleContactButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Back
@@ -728,41 +851,64 @@ std::vector<Group> Application::getMatchedGroups() {
     std::vector<Group> matches;
     std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
     
-    std::cout << "Finding matches for user subjects: ";
+    std::cout << "=== GROUP MATCHING DEBUG ===" << std::endl;
+    std::cout << "User subjects (" << userSubjects.size() << "): ";
     for (const auto& subject : userSubjects) {
-        std::cout << subject << " ";
+        std::cout << "'" << subject << "' ";
     }
     std::cout << std::endl;
+    std::cout << "Total groups available: " << groups.size() << std::endl;
     
-    for (const auto& group : groups) {
+    for (size_t groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+        const auto& group = groups[groupIndex];
         std::vector<std::string> groupSubjects = parseSubjects(group.subjects);
         
-        // Check if any user subject matches any group subject
+        std::cout << "\n--- Group " << (groupIndex + 1) << ": " << group.name << " ---" << std::endl;
+        std::cout << "Raw subjects: '" << group.subjects << "'" << std::endl;
+        std::cout << "Parsed subjects (" << groupSubjects.size() << "): ";
+        for (const auto& subject : groupSubjects) {
+            std::cout << "'" << subject << "' ";
+        }
+        std::cout << std::endl;
+        
+        // Check for at least one common subject
         bool hasMatch = false;
+        std::string matchedSubject = "";
+        
         for (const auto& userSubject : userSubjects) {
+            if (hasMatch) break; // Already found a match, no need to continue
+            
             for (const auto& groupSubject : groupSubjects) {
-                // Case-insensitive partial matching
-                std::string userSubjectLower = userSubject;
-                std::string groupSubjectLower = groupSubject;
-                std::transform(userSubjectLower.begin(), userSubjectLower.end(), userSubjectLower.begin(), ::tolower);
-                std::transform(groupSubjectLower.begin(), groupSubjectLower.end(), groupSubjectLower.begin(), ::tolower);
+                // Case-insensitive comparison
+                std::string userLower = userSubject;
+                std::string groupLower = groupSubject;
+                std::transform(userLower.begin(), userLower.end(), userLower.begin(), ::tolower);
+                std::transform(groupLower.begin(), groupLower.end(), groupLower.begin(), ::tolower);
                 
-                if (groupSubjectLower.find(userSubjectLower) != std::string::npos ||
-                    userSubjectLower.find(groupSubjectLower) != std::string::npos) {
+                if (userLower == groupLower) {
                     hasMatch = true;
-                    std::cout << "Match found: " << group.name << " (user: " << userSubject << ", group: " << groupSubject << ")" << std::endl;
+                    matchedSubject = userSubject + " == " + groupSubject;
+                    std::cout << "  ✅ MATCH: " << matchedSubject << std::endl;
                     break;
                 }
             }
-            if (hasMatch) break;
         }
         
         if (hasMatch) {
             matches.push_back(group);
+            std::cout << "  *** ADDED TO MATCHES *** (Total so far: " << matches.size() << ")" << std::endl;
+        } else {
+            std::cout << "  ❌ No common subjects found" << std::endl;
         }
     }
     
-    std::cout << "Found " << matches.size() << " matching groups" << std::endl;
+    std::cout << "\n=== FINAL RESULTS ===" << std::endl;
+    std::cout << "Total matches found: " << matches.size() << std::endl;
+    for (size_t i = 0; i < matches.size(); i++) {
+        std::cout << "  " << (i+1) << ". " << matches[i].name << std::endl;
+    }
+    std::cout << "===================" << std::endl;
+    
     return matches;
 }
 
@@ -820,12 +966,14 @@ void Application::render() {
 }
 
 void Application::renderGroupMatches() {
-    auto matches = getMatchedGroups();
-    float yPos = 140;
-    
-    for (size_t i = 0; i < matches.size() && i < 6; ++i) {
-        const auto& group = matches[i];
-        
+
+   float yPos = 140;
+	std::cout << "RENDERING: cachedMatches has " << cachedMatches.size() << " groups" << std::endl;
+
+   for (size_t i = 0; i < cachedMatches.size() && i < 6; ++i) {
+        const auto& group = cachedMatches[i];
+        std::cout << "Rendering group " << (i+1) << ": " << group.name << " at yPos=" << yPos << std::endl;
+
         // Create a card-like background for each group
         sf::RectangleShape groupCard(sf::Vector2f(800, 70));
         groupCard.setPosition(100, yPos);
@@ -843,21 +991,6 @@ void Application::renderGroupMatches() {
         groupName.setStyle(sf::Text::Bold);
         groupName.setPosition(120, yPos + 8);
         window.draw(groupName);
-        
-        // Member count badge
-        sf::CircleShape memberBadge(12);
-        memberBadge.setPosition(820, yPos + 10);
-        memberBadge.setFillColor(sf::Color(34, 197, 94));
-        window.draw(memberBadge);
-        
-        sf::Text memberCount;
-        memberCount.setFont(font);
-        memberCount.setString(std::to_string(group.memberCount));
-        memberCount.setCharacterSize(12);
-        memberCount.setFillColor(sf::Color::White);
-        memberCount.setStyle(sf::Text::Bold);
-        memberCount.setPosition(826, yPos + 14);
-        window.draw(memberCount);
         
         // Group description
         sf::Text groupDesc;
@@ -877,25 +1010,31 @@ void Application::renderGroupMatches() {
         locationText.setPosition(120, yPos + 52);
         window.draw(locationText);
         
-        // Join button
-        sf::RectangleShape joinButton(sf::Vector2f(80, 30));
-        joinButton.setPosition(750, yPos + 20);
-        joinButton.setFillColor(sf::Color(168, 85, 247)); // Purple color
-        window.draw(joinButton);
-        
-        sf::Text joinButtonText;
-        joinButtonText.setFont(font);
-        joinButtonText.setString("Join");
-        joinButtonText.setCharacterSize(14);
-        joinButtonText.setFillColor(sf::Color::White);
-        joinButtonText.setStyle(sf::Text::Bold);
-        joinButtonText.setPosition(775, yPos + 28);
-        window.draw(joinButtonText);
-        
-        yPos += 80;
+		// Join button - make it wider
+		sf::RectangleShape joinButton(sf::Vector2f(120, 30));  // Changed from 80 to 120
+		joinButton.setPosition(710, yPos + 20);  // Moved left to fit (was 750)
+		joinButton.setFillColor(sf::Color(168, 85, 247)); // Purple color
+		window.draw(joinButton);
+
+		sf::Text joinButtonText;
+		joinButtonText.setFont(font);
+		joinButtonText.setString("See Information");
+		joinButtonText.setCharacterSize(11);  // Slightly smaller font
+		joinButtonText.setFillColor(sf::Color::White);
+		joinButtonText.setStyle(sf::Text::Bold);
+
+		// Center the text in the wider button
+		sf::FloatRect textBounds = joinButtonText.getLocalBounds();
+		joinButtonText.setPosition(
+			710 + (120 - textBounds.width) / 2.0f,  // Center in 120px button
+			yPos + 20 + (30 - textBounds.height) / 2.0f
+		);
+		
+		window.draw(joinButtonText);
+		yPos += 80;	
     }
     
-    if (matches.empty()) {
+	if (cachedMatches.empty()) {
         sf::Text noMatches;
         noMatches.setFont(font);
         noMatches.setString("No matching study groups found yet.\nTry updating your classes in your profile!");
@@ -904,4 +1043,5 @@ void Application::renderGroupMatches() {
         centerText(noMatches, 300);
         window.draw(noMatches);
     }
+	
 }
