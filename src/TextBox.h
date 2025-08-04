@@ -9,15 +9,18 @@ private:
     sf::RectangleShape box;
     sf::Text text;
     sf::Text label;
+    sf::String labelText;  
+    sf::Font& font;        
+    sf::Vector2f position; 
+    sf::Vector2f size;     
     std::string content;
-    std::string displayContent;  // What to show (with asterisks if password)
     bool isActive;
     bool showCursor;
-    bool isPassword;  // New member for password mode
+    bool isPassword;
     sf::Clock cursorClock;
     
 public:
-    TextBox(float x, float y, float width, float height, const std::string& labelText, sf::Font& font);
+    TextBox(float x, float y, float width, float height, const std::string& label, sf::Font& font, bool password = false);
     void handleEvent(const sf::Event& event);
     void update();
     void updateDisplayText();
@@ -25,8 +28,5 @@ public:
     std::string getContent() const;
     void setActive(bool active);
     void setContent(const std::string& content);
-    void setPasswordMode(bool passwordMode);
-    bool getIsActive() const { return isActive; }
 };
-
 #endif
