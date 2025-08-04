@@ -8,6 +8,7 @@
 #include <memory>
 #include "TextBox.h"
 #include "Dropdown.h"
+#include <sstream>
 #include "MultiSelectDropdown.h"
 
 enum class PageType {
@@ -15,7 +16,8 @@ enum class PageType {
     REGISTRATION,
     PROFILE,
     GROUP_MATCHING,
-    CONTACT
+    CONTACT,
+	CREATE_GROUP
 };
 
 struct User {
@@ -32,20 +34,22 @@ struct Group {
     std::string subjects;
     std::string location;
 	
-    int memberCount;
     std::string contactCell;
     
     // Constructor for backward compatibility
     Group(const std::string& n, const std::string& d, const std::string& s, 
           const std::string& l, int m, const std::string& c = "No contact available")
-        : name(n), description(d), subjects(s), location(l), memberCount(m), contactCell(c) {}
+        : name(n), description(d), subjects(s), location(l), contactCell(c) {}
     
     // Default constructor
-    Group() : memberCount(0), contactCell("No contact available") {}
+    Group() : contactCell("No contact available") {}
 };
 
 class Application {
 private:
+	std::vector<Group> cachedMatches;
+
+	std::string selectedGroupName;  
     sf::RenderWindow window;
     sf::Font font;
     PageType currentPage;
@@ -76,7 +80,8 @@ private:
     void setupProfilePage();
     void setupGroupMatchingPage();
     void setupContactPage();
-    void clearTextBoxes();
+    void setupCreateGroupPage();
+	void clearTextBoxes();
     void createButton(float x, float y, float width, float height, const std::string& text, sf::Color color);
     void centerText(sf::Text& text, float y);
     void handleEvents();
@@ -88,6 +93,8 @@ private:
     void handleProfileButtons(size_t buttonIndex);
     void handleGroupMatchingButtons(size_t buttonIndex);
     void handleContactButtons(size_t buttonIndex);
+	void handleCreateGroupButtons(size_t buttonIndex);
+
     void update();
     void render();
     void renderGroupMatches();
