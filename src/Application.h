@@ -31,6 +31,7 @@ struct Group {
     std::string description;
     std::string subjects;
     std::string location;
+	
     int memberCount;
     std::string contactCell;
     
