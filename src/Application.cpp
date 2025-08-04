@@ -1,21 +1,22 @@
 #include "Application.h"
 #include "pg_connector.hpp"
 
+
 Application::Application() : window(sf::VideoMode(1000, 700), "Study Sync Pro"), 
-                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false) {
+                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false), selectedGroupIndex(-1) {
     std::cout << "Starting Study Sync Pro application..." << std::endl;
     
     if (!font.loadFromFile("./fonts/arial.ttf")) {
-        std::cout << "❌ Error loading font! Make sure arial.ttf is in the fonts/ directory" << std::endl;
+        std::cout << "Error loading font! Make sure arial.ttf is in the fonts/ directory" << std::endl;
         std::cout << "Trying alternative font loading..." << std::endl;
         if (!font.loadFromFile("fonts/arial.ttf")) {
-            std::cout << "❌ Could not load font from fonts/arial.ttf either" << std::endl;
+            std::cout << "Could not load font from fonts/arial.ttf either" << std::endl;
             std::cout << "Application will continue but text may not display properly" << std::endl;
         } else {
-            std::cout << "✅ Font loaded from fonts/arial.ttf" << std::endl;
+            std::cout << "Font loaded from fonts/arial.ttf" << std::endl;
         }
     } else {
-        std::cout << "✅ Font loaded successfully!" << std::endl;
+        std::cout << "Font loaded successfully!" << std::endl;
     }
     
     // Initialize database connection
@@ -23,7 +24,7 @@ Application::Application() : window(sf::VideoMode(1000, 700), "Study Sync Pro"),
     
     std::cout << "Setting up initial page..." << std::endl;
     setupCurrentPage();
-    std::cout << "✅ Application ready!" << std::endl;
+    std::cout << "Application ready!" << std::endl;
 }
 
 Application::~Application() {
@@ -43,7 +44,7 @@ void Application::initializeDatabase() {
         PGresult* res = db.exec("SELECT group_name, description FROM groups");
         int groupCount = PQntuples(res);
         
-        std::cout << "✅ Database connected! Found " << groupCount << " groups in database" << std::endl;
+        std::cout << "Database connected! Found " << groupCount << " groups in database" << std::endl;
         
         // Load actual groups from database
         for (int i = 0; i < groupCount; i++) {
@@ -53,7 +54,6 @@ void Application::initializeDatabase() {
             group.subjects = group.name; // Use group name for subject matching
             group.location = "Various Locations";
             group.memberCount = 5 + (i % 10); // Mock member count
-            group.id = -1;
             groups.push_back(group);
         }
         PQclear(res);
@@ -61,87 +61,24 @@ void Application::initializeDatabase() {
         if (groups.empty()) {
             std::cout << "No groups found in database, using sample data" << std::endl;
             // Fallback to sample data
-            Group g1;
-            g1.name = "Algebra Buddies";
-            g1.description = "Group focused on Algebra help and practice";
-            g1.subjects = "algebra,math";
-            g1.location = "Study Hall A";
-            g1.memberCount = 8;
-            g1.id = -1;
-            groups.push_back(g1);
-            
-            Group g2;
-            g2.name = "Bio Crash Course";
-            g2.description = "Study group for AP Biology review sessions";
-            g2.subjects = "biology,science";
-            g2.location = "Library Room 202";
-            g2.memberCount = 12;
-            g2.id = -1;
-            groups.push_back(g2);
-            
-            Group g3;
-            g3.name = "CS101 Legends";
-            g3.description = "Intro to programming and data structures";
-            g3.subjects = "programming,computer science";
-            g3.location = "Computer Lab";
-            g3.memberCount = 15;
-            g3.id = -1;
-            groups.push_back(g3);
+            groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
+            groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
+            groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
         }
         
     } catch (const std::exception& e) {
         std::cout << "❌ Database connection failed: " << e.what() << std::endl;
         
         // Fallback to sample data
-        Group g1;
-        g1.name = "Algebra Buddies";
-        g1.description = "Group focused on Algebra help and practice";
-        g1.subjects = "algebra,math";
-        g1.location = "Study Hall A";
-        g1.memberCount = 8;
-        g1.id = -1;
-        groups.push_back(g1);
-        
-        Group g2;
-        g2.name = "Bio Crash Course";
-        g2.description = "Study group for AP Biology review sessions";
-        g2.subjects = "biology,science";
-        g2.location = "Library Room 202";
-        g2.memberCount = 12;
-        g2.id = -1;
-        groups.push_back(g2);
-        
-        Group g3;
-        g3.name = "CS101 Legends";
-        g3.description = "Intro to programming and data structures";
-        g3.subjects = "programming,computer science";
-        g3.location = "Computer Lab";
-        g3.memberCount = 15;
-        g3.id = -1;
-        groups.push_back(g3);
-        
-        Group g4;
-        g4.name = "English Essay Editors";
-        g4.description = "Peer editing group for literature assignments";
-        g4.subjects = "english,literature";
-        g4.location = "English Department";
-        g4.memberCount = 6;
-        g4.id = -1;
-        groups.push_back(g4);
-        
-        Group g5;
-        g5.name = "SAT Prep Circle";
-        g5.description = "Preparing for SAT with weekly practice tests";
-        g5.subjects = "math,english,test prep";
-        g5.location = "Testing Center";
-        g5.memberCount = 10;
-        g5.id = -1;
-        groups.push_back(g5);
+        groups.push_back({"Algebra Buddies", "Group focused on Algebra help and practice", "algebra,math", "Study Hall A", 8});
+        groups.push_back({"Bio Crash Course", "Study group for AP Biology review sessions", "biology,science", "Library Room 202", 12});
+        groups.push_back({"CS101 Legends", "Intro to programming and data structures", "programming,computer science", "Computer Lab", 15});
+        groups.push_back({"English Essay Editors", "Peer editing group for literature assignments", "english,literature", "English Department", 6});
+        groups.push_back({"SAT Prep Circle", "Preparing for SAT with weekly practice tests", "math,english,test prep", "Testing Center", 10});
     }
     
     std::cout << "Loaded " << groups.size() << " study groups" << std::endl;
 }
-
 
 void Application::run() {
     std::cout << "Starting main application loop..." << std::endl;
@@ -198,8 +135,6 @@ void Application::clearTextBoxes() {
     buttons.clear();
     buttonTexts.clear();
     labels.clear();
-    buttonDefaultColors.clear();  // Add this line
-    buttonHoverStates.clear();   // Add this line
 }
 
 void Application::setupCurrentPage() {
@@ -219,6 +154,9 @@ void Application::setupCurrentPage() {
         case PageType::GROUP_MATCHING:
             setupGroupMatchingPage();
             break;
+        case PageType::CONTACT:
+            setupContactPage();
+            break;
     }
 }
 
@@ -230,18 +168,8 @@ void Application::setupLoginPage() {
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 120);
     
-    // Subtitle
-    sf::Text subtitleText;
-    subtitleText.setFont(font);
-    subtitleText.setString("Connect with your academic community");
-    subtitleText.setCharacterSize(18);
-    subtitleText.setFillColor(sf::Color(180, 180, 180));
-    centerText(subtitleText, 170);
-    
     textBoxes.push_back(new TextBox(350, 240, 300, 45, "Username:", font));
     textBoxes.push_back(new TextBox(350, 320, 300, 45, "Password:", font));
-    
-    textBoxes[1]->setPasswordMode(true); // Set password mode for password field
     
     createButton(400, 400, 200, 50, "Login", sf::Color(64, 156, 255));
     createButton(400, 470, 200, 50, "Create Account", sf::Color(34, 197, 94));
@@ -261,15 +189,6 @@ void Application::setupRegistrationPage() {
     titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 40);
-    
-    sf::Text subtitleText;
-    subtitleText.setFont(font);
-    subtitleText.setString("Join the study community");
-    subtitleText.setCharacterSize(16);
-    subtitleText.setFillColor(sf::Color(180, 180, 180));
-    centerText(subtitleText, 80);
-    
-    clearTextBoxes();
     
     // Common subjects list
     std::vector<std::string> subjects = {
@@ -303,10 +222,7 @@ void Application::setupRegistrationPage() {
     textBoxes.push_back(new TextBox(350, startY + 3 * spacing, 300, 45, "Username:", font));
     textBoxes.push_back(new TextBox(350, startY + 4 * spacing, 300, 45, "Password:", font));
     textBoxes.push_back(new TextBox(350, startY + 5 * spacing, 300, 45, "Confirm Password:", font));
-
-    textBoxes[3]->setPasswordMode(true);  // Password field
-    textBoxes[4]->setPasswordMode(true);  // Confirm Password field
-
+    
     createButton(350, startY + 6 * spacing + 30, 140, 50, "Register", sf::Color(34, 197, 94));
     createButton(510, startY + 6 * spacing + 30, 140, 50, "Back", sf::Color(107, 114, 128));
     
@@ -325,15 +241,6 @@ void Application::setupProfilePage() {
     titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 100);
-    
-    sf::Text infoText;
-    infoText.setFont(font);
-    infoText.setString("Class of " + std::to_string(currentUser.gradYear));
-    infoText.setCharacterSize(18);
-    infoText.setFillColor(sf::Color(160, 160, 160));
-    centerText(infoText, 140);
-    
-    clearTextBoxes();
     
     // Common subjects list
     std::vector<std::string> subjects = {
@@ -365,7 +272,9 @@ void Application::setupProfilePage() {
     }
     
     textBoxes.push_back(new TextBox(350, 270, 300, 45, "Graduation Year:", font));
-    textBoxes[0]->setContent(std::to_string(currentUser.gradYear));
+    if (currentUser.gradYear != 0) {
+        textBoxes[0]->setContent(std::to_string(currentUser.gradYear));
+    }
     
     createButton(300, 360, 140, 50, "Save Profile", sf::Color(34, 197, 94));
     createButton(450, 360, 140, 50, "Find Groups", sf::Color(168, 85, 247));
@@ -387,15 +296,111 @@ void Application::setupGroupMatchingPage() {
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 60);
     
-    // Subtitle
-    sf::Text subtitleText;
-    subtitleText.setFont(font);
-    subtitleText.setString("Groups matching your classes");
-    subtitleText.setCharacterSize(16);
-    subtitleText.setFillColor(sf::Color(160, 160, 160));
-    centerText(subtitleText, 100);
-    
     createButton(450, 600, 100, 50, "Back", sf::Color(107, 114, 128));
+    
+    showMessageText = false;
+}
+
+void Application::setupContactPage() {
+    auto matches = getMatchedGroups();
+    if (selectedGroupIndex < 0 || selectedGroupIndex >= (int)matches.size()) {
+        // Invalid group index, go back to group matching
+        std::cout << "Invalid group index: " << selectedGroupIndex << ", matches size: " << matches.size() << std::endl;
+        currentPage = PageType::GROUP_MATCHING;
+        setupCurrentPage();
+        return;
+    }
+    
+    const Group& selectedGroup = matches[selectedGroupIndex];
+    
+    titleText.setFont(font);
+    titleText.setString("Contact Information");
+    titleText.setCharacterSize(36);
+    titleText.setFillColor(sf::Color(64, 156, 255));
+    titleText.setStyle(sf::Text::Bold);
+    centerText(titleText, 60);
+    
+    // Group name
+    sf::Text groupNameText;
+    groupNameText.setFont(font);
+    groupNameText.setString(selectedGroup.name);
+    groupNameText.setCharacterSize(28);
+    groupNameText.setFillColor(sf::Color(245, 245, 245));
+    groupNameText.setStyle(sf::Text::Bold);
+    centerText(groupNameText, 120);
+    labels.push_back(groupNameText);
+    
+    // Contact cell label
+    sf::Text contactLabel;
+    contactLabel.setFont(font);
+    contactLabel.setString("Contact Cell:");
+    contactLabel.setCharacterSize(20);
+    contactLabel.setFillColor(sf::Color(180, 180, 180));
+    contactLabel.setPosition(350, 200);
+    labels.push_back(contactLabel);
+    
+    // Contact cell number
+    sf::Text contactNumber;
+    contactNumber.setFont(font);
+    contactNumber.setString(selectedGroup.contactCell);
+    contactNumber.setCharacterSize(24);
+    contactNumber.setFillColor(sf::Color(34, 197, 94)); // Green color for phone number
+    contactNumber.setStyle(sf::Text::Bold);
+    contactNumber.setPosition(350, 240);
+    labels.push_back(contactNumber);
+    
+    // Group description
+    sf::Text descLabel;
+    descLabel.setFont(font);
+    descLabel.setString("About this group:");
+    descLabel.setCharacterSize(18);
+    descLabel.setFillColor(sf::Color(180, 180, 180));
+    descLabel.setPosition(350, 300);
+    labels.push_back(descLabel);
+    
+    sf::Text description;
+    description.setFont(font);
+    description.setString(selectedGroup.description);
+    description.setCharacterSize(16);
+    description.setFillColor(sf::Color(200, 200, 200));
+    description.setPosition(350, 330);
+    labels.push_back(description);
+    
+    // Location
+    sf::Text locationLabel;
+    locationLabel.setFont(font);
+    locationLabel.setString("Meeting Location:");
+    locationLabel.setCharacterSize(18);
+    locationLabel.setFillColor(sf::Color(180, 180, 180));
+    locationLabel.setPosition(350, 380);
+    labels.push_back(locationLabel);
+    
+    sf::Text location;
+    location.setFont(font);
+    location.setString(selectedGroup.location);
+    location.setCharacterSize(16);
+    location.setFillColor(sf::Color(200, 200, 200));
+    location.setPosition(350, 410);
+    labels.push_back(location);
+    
+    // Member count
+    sf::Text memberLabel;
+    memberLabel.setFont(font);
+    memberLabel.setString("Current Members:");
+    memberLabel.setCharacterSize(18);
+    memberLabel.setFillColor(sf::Color(180, 180, 180));
+    memberLabel.setPosition(350, 460);
+    labels.push_back(memberLabel);
+    
+    sf::Text members;
+    members.setFont(font);
+    members.setString(std::to_string(selectedGroup.memberCount) + " active members");
+    members.setCharacterSize(16);
+    members.setFillColor(sf::Color(200, 200, 200));
+    members.setPosition(350, 490);
+    labels.push_back(members);
+    
+    createButton(450, 550, 100, 50, "Back", sf::Color(107, 114, 128));
     
     showMessageText = false;
 }
@@ -404,12 +409,8 @@ void Application::createButton(float x, float y, float width, float height, cons
     sf::RectangleShape button(sf::Vector2f(width, height));
     button.setPosition(x, y);
     button.setFillColor(color);
-    button.setOutlineThickness(0); // Remove outline for modern look
+    button.setOutlineThickness(0);
     buttons.push_back(button);
-    
-    // Store default color for hover effects
-    buttonDefaultColors.push_back(color);
-    buttonHoverStates.push_back(false);
     
     sf::Text buttonText;
     buttonText.setFont(font);
@@ -428,7 +429,7 @@ void Application::createButton(float x, float y, float width, float height, cons
 
 void Application::centerText(sf::Text& text, float y) {
     sf::FloatRect bounds = text.getLocalBounds();
-    text.setPosition((1000 - bounds.width) / 2.0f, y); // Updated for new window width
+    text.setPosition((1000 - bounds.width) / 2.0f, y);
 }
 
 void Application::handleEvents() {
@@ -436,28 +437,6 @@ void Application::handleEvents() {
     while (window.pollEvent(event)) {
         if (event.type == sf::Event::Closed)
             window.close();
-        
-        // Tab navigation
-        if (event.type == sf::Event::KeyPressed) {
-            if (event.key.code == sf::Keyboard::Tab) {
-                // Find current active textbox
-                int currentActive = -1;
-                for (size_t i = 0; i < textBoxes.size(); ++i) {
-                    if (textBoxes[i]->getIsActive()) {  // Changed from isActive to getIsActive()
-                        currentActive = i;
-                        textBoxes[i]->setActive(false);
-                        break;
-                    }
-                }
-                
-                // Move to next textbox
-                if (currentActive >= 0 && currentActive < static_cast<int>(textBoxes.size()) - 1) {
-                    textBoxes[currentActive + 1]->setActive(true);
-                } else if (textBoxes.size() > 0) {
-                    textBoxes[0]->setActive(true);
-                }
-            }
-        }
         
         for (auto* textBox : textBoxes) {
             textBox->handleEvent(event);
@@ -475,23 +454,40 @@ void Application::handleEvents() {
             sf::Vector2i mousePos = sf::Mouse::getPosition(window);
             handleButtonClicks(mousePos);
         }
-        
-        // Add mouse movement handling for hover effects
-        if (event.type == sf::Event::MouseMoved) {
-            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            handleMouseMove(mousePos);
-        }
     }
 }
 
-
 void Application::handleButtonClicks(sf::Vector2i mousePos) {
+    // Handle join buttons in group matching page first
+    if (currentPage == PageType::GROUP_MATCHING) {
+        handleJoinButtonClicks(mousePos);
+    }
+    
+    // Then handle regular buttons
     for (size_t i = 0; i < buttons.size(); ++i) {
         sf::FloatRect buttonBounds = buttons[i].getGlobalBounds();
         if (buttonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
             handleButtonClick(i);
             break;
         }
+    }
+}
+
+void Application::handleJoinButtonClicks(sf::Vector2i mousePos) {
+    auto matches = getMatchedGroups();
+    float yPos = 140;
+    
+    for (size_t i = 0; i < matches.size() && i < 6; ++i) {
+        // Check if click is within the join button area for this group
+        sf::FloatRect joinButtonBounds(750, yPos + 20, 80, 30);
+        if (joinButtonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+            selectedGroupIndex = (int)i;
+            std::cout << "Join button clicked for group " << i << ": " << matches[i].name << std::endl;
+            currentPage = PageType::CONTACT;
+            setupCurrentPage();
+            return;
+        }
+        yPos += 80;
     }
 }
 
@@ -509,9 +505,11 @@ void Application::handleButtonClick(size_t buttonIndex) {
         case PageType::GROUP_MATCHING:
             handleGroupMatchingButtons(buttonIndex);
             break;
+        case PageType::CONTACT:
+            handleContactButtons(buttonIndex);
+            break;
     }
 }
-
 void Application::handleLoginButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Login
         std::string username = textBoxes[0]->getContent();
@@ -543,7 +541,7 @@ void Application::handleLoginButtons(size_t buttonIndex) {
                 isLoggedIn = true;
                 currentPage = PageType::PROFILE;
                 setupCurrentPage();
-                std::cout << "✅ Database login successful for: " << username << std::endl;
+                std::cout << "Database login successful for: " << username << std::endl;
                 return;
             }
             PQclear(res);
@@ -596,74 +594,17 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             return;
         }
         
-        // Try to register in database
-        try {
-            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
-            PgConnector db(connStr);
-            
-            PGresult* beginRes = db.exec("BEGIN");
-            PQclear(beginRes);
-            
-            // Check if username already exists
-            std::vector<const char*> checkParams = {username.c_str()};
-            PGresult* checkRes = db.execParams("SELECT username FROM user_login WHERE username = $1", checkParams);
-            
-            if (PQntuples(checkRes) > 0) {
-                PQclear(checkRes);
-                PGresult* rollbackRes = db.exec("ROLLBACK");
-                PQclear(rollbackRes);
-                messageText.setString("Username already exists!");
-                return;
-            }
-            PQclear(checkRes);
-            
-            // Insert into profile table
-            std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), currentClasses.c_str()};
-            PGresult* profileRes = db.execParams(
-                "INSERT INTO profile (name, grad_year, current_classes) VALUES ($1, $2, $3) RETURNING id",
-                profileParams
-            );
-            
-            if (PQntuples(profileRes) == 0) {
-                PQclear(profileRes);
-                PGresult* rollbackRes = db.exec("ROLLBACK");
-                PQclear(rollbackRes);
-                messageText.setString("Failed to create profile!");
-                return;
-            }
-            
-            std::string profileId = PQgetvalue(profileRes, 0, 0);
-            PQclear(profileRes);
-            
-            // Insert into user_login
-            std::vector<const char*> loginParams = {username.c_str(), password.c_str(), profileId.c_str()};
-            PGresult* loginRes = db.execParams(
-                "INSERT INTO user_login (username, password_hash, profile_id) VALUES ($1, $2, $3)",
-                loginParams
-            );
-            PQclear(loginRes);
-            
-            PGresult* commitRes = db.exec("COMMIT");
-            PQclear(commitRes);
-            
-            // Set current user and login
-            currentUser.name = name;
-            currentUser.username = username;
-            currentUser.subjects = currentClasses;
-            currentUser.gradYear = gradYear;
-            currentUser.profileId = std::stoi(profileId);
-            
-            isLoggedIn = true;
-            currentPage = PageType::PROFILE;
-            setupCurrentPage();
-            std::cout << "✅ User registered successfully in database: " << username << std::endl;
-            return;
-            
-        } catch (const std::exception& e) {
-            std::cout << "Database registration failed: " << e.what() << std::endl;
-            messageText.setString("Registration failed! Try again.");
-            return;
-        }
+        // Set current user and login
+        currentUser.name = name;
+        currentUser.username = username;
+        currentUser.subjects = currentClasses;
+        currentUser.gradYear = gradYear;
+        currentUser.profileId = 1;
+        
+        isLoggedIn = true;
+        currentPage = PageType::PROFILE;
+        setupCurrentPage();
+        std::cout << "User registered successfully: " << username << std::endl;
         
     } else if (buttonIndex == 1) { // Back
         currentPage = PageType::LOGIN;
@@ -689,34 +630,12 @@ void Application::handleProfileButtons(size_t buttonIndex) {
             return;
         }
         
-        // Try to update in database
-        try {
-            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
-            PgConnector db(connStr);
-            
-            std::vector<const char*> params = {
-                subjects.c_str(),
-                std::to_string(gradYear).c_str(),
-                std::to_string(currentUser.profileId).c_str()
-            };
-            
-            PGresult* res = db.execParams(
-                "UPDATE profile SET current_classes = $1, grad_year = $2 WHERE id = $3",
-                params
-            );
-            PQclear(res);
-            
-            // Update local user data
-            currentUser.subjects = subjects;
-            currentUser.gradYear = gradYear;
-            
-            messageText.setString("Profile saved successfully!");
-            std::cout << "✅ Profile updated in database" << std::endl;
-            
-        } catch (const std::exception& e) {
-            std::cout << "Database update failed: " << e.what() << std::endl;
-            messageText.setString("Failed to save profile!");
-        }
+        // Update local user data
+        currentUser.subjects = subjects;
+        currentUser.gradYear = gradYear;
+        
+        messageText.setString("Profile saved successfully!");
+        std::cout << "Profile updated" << std::endl;
         
     } else if (buttonIndex == 1) { // Find Groups
         if (currentUser.subjects.empty()) {
@@ -740,31 +659,22 @@ void Application::handleGroupMatchingButtons(size_t buttonIndex) {
     }
 }
 
-void Application::handleMouseMove(sf::Vector2i mousePos) {
-    for (size_t i = 0; i < buttons.size(); ++i) {
-        sf::FloatRect buttonBounds = buttons[i].getGlobalBounds();
-        if (buttonBounds.contains(static_cast<float>(mousePos.x), 
-                                  static_cast<float>(mousePos.y))) {
-            if (!buttonHoverStates[i]) {
-                buttonHoverStates[i] = true;
-                // Lighten the color on hover
-                sf::Color current = buttonDefaultColors[i];
-                buttons[i].setFillColor(sf::Color(
-                    std::min(255, current.r + 40),
-                    std::min(255, current.g + 40),
-                    std::min(255, current.b + 40)
-                ));
-            }
-        } else if (buttonHoverStates[i]) {
-            buttonHoverStates[i] = false;
-            buttons[i].setFillColor(buttonDefaultColors[i]);
-        }
+void Application::handleContactButtons(size_t buttonIndex) {
+    if (buttonIndex == 0) { // Back
+        currentPage = PageType::GROUP_MATCHING;
+        setupCurrentPage();
     }
 }
 
 std::vector<Group> Application::getMatchedGroups() {
     std::vector<Group> matches;
     std::vector<std::string> userSubjects = parseSubjects(currentUser.subjects);
+    
+    std::cout << "Finding matches for user subjects: ";
+    for (const auto& subject : userSubjects) {
+        std::cout << subject << " ";
+    }
+    std::cout << std::endl;
     
     for (const auto& group : groups) {
         std::vector<std::string> groupSubjects = parseSubjects(group.subjects);
@@ -782,6 +692,7 @@ std::vector<Group> Application::getMatchedGroups() {
                 if (groupSubjectLower.find(userSubjectLower) != std::string::npos ||
                     userSubjectLower.find(groupSubjectLower) != std::string::npos) {
                     hasMatch = true;
+                    std::cout << "Match found: " << group.name << " (user: " << userSubject << ", group: " << groupSubject << ")" << std::endl;
                     break;
                 }
             }
@@ -793,6 +704,7 @@ std::vector<Group> Application::getMatchedGroups() {
         }
     }
     
+    std::cout << "Found " << matches.size() << " matching groups" << std::endl;
     return matches;
 }
 
@@ -901,11 +813,26 @@ void Application::renderGroupMatches() {
         // Location
         sf::Text locationText;
         locationText.setFont(font);
-        locationText.setString("📍 " + group.location);
+        locationText.setString(group.location);
         locationText.setCharacterSize(12);
         locationText.setFillColor(sf::Color(107, 114, 128));
         locationText.setPosition(120, yPos + 52);
         window.draw(locationText);
+        
+        // Join button
+        sf::RectangleShape joinButton(sf::Vector2f(80, 30));
+        joinButton.setPosition(750, yPos + 20);
+        joinButton.setFillColor(sf::Color(168, 85, 247)); // Purple color
+        window.draw(joinButton);
+        
+        sf::Text joinButtonText;
+        joinButtonText.setFont(font);
+        joinButtonText.setString("Join");
+        joinButtonText.setCharacterSize(14);
+        joinButtonText.setFillColor(sf::Color::White);
+        joinButtonText.setStyle(sf::Text::Bold);
+        joinButtonText.setPosition(775, yPos + 28);
+        window.draw(joinButtonText);
         
         yPos += 80;
     }
