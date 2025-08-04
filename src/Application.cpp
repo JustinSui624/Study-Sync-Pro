@@ -3,7 +3,8 @@
 
 
 Application::Application() : window(sf::VideoMode(1000, 700), "Study Sync Pro"), 
-                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false), selectedGroupName("") {
+                            currentPage(PageType::LOGIN), isLoggedIn(false), showMessageText(false), 
+                            selectedGroupName(""), currentMatchPage(0), groupsPerPage(6) {
     std::cout << "Starting Study Sync Pro application..." << std::endl;
     
     if (!font.loadFromFile("./fonts/arial.ttf")) {
@@ -151,12 +152,15 @@ void Application::setupLoginPage() {
     titleText.setFont(font);
     titleText.setString("Study Sync Pro");
     titleText.setCharacterSize(42);
-    titleText.setFillColor(sf::Color(64, 156, 255)); // Modern blue
+    titleText.setFillColor(sf::Color(64, 156, 255));
     titleText.setStyle(sf::Text::Bold);
     centerText(titleText, 120);
     
-    textBoxes.push_back(new TextBox(350, 240, 300, 45, "Username:", font));
-    textBoxes.push_back(new TextBox(350, 320, 300, 45, "Password:", font));
+    // Username field (normal)
+    textBoxes.push_back(new TextBox(350, 240, 300, 45, "Username:", font, false));
+    
+    // Password field (hidden)
+    textBoxes.push_back(new TextBox(350, 320, 300, 45, "Password:", font, true));
     
     createButton(400, 400, 200, 50, "Login", sf::Color(64, 156, 255));
     createButton(400, 470, 200, 50, "Create Account", sf::Color(34, 197, 94));
@@ -207,8 +211,10 @@ void Application::setupRegistrationPage() {
     multiSelectDropdowns.push_back(new MultiSelectDropdown(350, startY + 2 * spacing, 300, 45, font, subjects, 5));
     
     textBoxes.push_back(new TextBox(350, startY + 3 * spacing, 300, 45, "Username:", font));
-    textBoxes.push_back(new TextBox(350, startY + 4 * spacing, 300, 45, "Password:", font));
-    textBoxes.push_back(new TextBox(350, startY + 5 * spacing, 300, 45, "Confirm Password:", font));
+
+	textBoxes.push_back(new TextBox(350, startY + 4 * spacing, 300, 45, "Password:", font, true));
+	textBoxes.push_back(new TextBox(350, startY + 5 * spacing, 300, 45, "Confirm Password:", font, true));
+
     
     createButton(350, startY + 6 * spacing + 30, 140, 50, "Register", sf::Color(34, 197, 94));
     createButton(510, startY + 6 * spacing + 30, 140, 50, "Back", sf::Color(107, 114, 128));
@@ -290,15 +296,23 @@ void Application::setupGroupMatchingPage() {
     subtitleText.setFillColor(sf::Color(160, 160, 160));
     centerText(subtitleText, 100);
     
-    createButton(300, 625, 120, 50, "Back", sf::Color(107, 114, 128));
-	createButton(580, 625, 140, 50, "Create Group", sf::Color(34, 197, 94));
-
     // Calculate matches ONCE when entering this page
     cachedMatches = getMatchedGroups();
+    currentMatchPage = 0; // Reset to first page
+    
+    // Create navigation buttons
+    createButton(200, 625, 100, 50, "Back", sf::Color(107, 114, 128));
+    
+    // Pagination buttons (only show if needed)
+    if (cachedMatches.size() > groupsPerPage) {
+        createButton(320, 625, 100, 50, "Previous", sf::Color(75, 85, 99));
+        createButton(440, 625, 100, 50, "Next", sf::Color(75, 85, 99));
+    }
+    
+    createButton(580, 625, 140, 50, "Create Group", sf::Color(34, 197, 94));
     
     showMessageText = false;
 }
-
 void Application::setupCreateGroupPage() {
     titleText.setFont(font);
     titleText.setString("Create New Study Group");
@@ -411,14 +425,37 @@ void Application::handleButtonClick(size_t buttonIndex) {
 }
 
 void Application::handleGroupMatchingButtons(size_t buttonIndex) {
-    if (buttonIndex == 0) { // Back
-        currentPage = PageType::PROFILE;
-        setupCurrentPage();
-    } else if (buttonIndex == 1) { // Create Group
-        currentPage = PageType::CREATE_GROUP;
-        setupCurrentPage();
+    int totalPages = (cachedMatches.size() + groupsPerPage - 1) / groupsPerPage;
+    
+    if (cachedMatches.size() > groupsPerPage) {
+        // With pagination buttons
+        if (buttonIndex == 0) { // Back
+            currentPage = PageType::PROFILE;
+            setupCurrentPage();
+        } else if (buttonIndex == 1) { // Previous
+            if (currentMatchPage > 0) {
+                currentMatchPage--;
+            }
+        } else if (buttonIndex == 2) { // Next
+            if (currentMatchPage < totalPages - 1) {
+                currentMatchPage++;
+            }
+        } else if (buttonIndex == 3) { // Create Group
+            currentPage = PageType::CREATE_GROUP;
+            setupCurrentPage();
+        }
+    } else {
+        // Without pagination buttons
+        if (buttonIndex == 0) { // Back
+            currentPage = PageType::PROFILE;
+            setupCurrentPage();
+        } else if (buttonIndex == 1) { // Create Group
+            currentPage = PageType::CREATE_GROUP;
+            setupCurrentPage();
+        }
     }
 }
+
 void Application::handleCreateGroupButtons(size_t buttonIndex) {
     if (buttonIndex == 0) { // Create Group
         std::string groupName = textBoxes[0]->getContent();
@@ -624,13 +661,14 @@ void Application::handleEvents() {
 
 
 void Application::handleJoinButtonClicks(sf::Vector2i mousePos) {
-    // Use cached matches instead of recalculating
     float yPos = 140;
+    int startIndex = currentMatchPage * groupsPerPage;
+    int endIndex = std::min(startIndex + groupsPerPage, (int)cachedMatches.size());
     
-    for (size_t i = 0; i < cachedMatches.size() && i < 6; ++i) {
+    for (int i = startIndex; i < endIndex; ++i) {
         sf::FloatRect joinButtonBounds(710, yPos + 20, 120, 30);
         if (joinButtonBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            selectedGroupName = cachedMatches[i].name;  // Use cached matches
+            selectedGroupName = cachedMatches[i].name;
             std::cout << "Join button clicked for group: " << selectedGroupName << std::endl;
             currentPage = PageType::CONTACT;
             setupCurrentPage();
@@ -966,18 +1004,35 @@ void Application::render() {
 }
 
 void Application::renderGroupMatches() {
-
-   float yPos = 140;
-	std::cout << "RENDERING: cachedMatches has " << cachedMatches.size() << " groups" << std::endl;
-
-   for (size_t i = 0; i < cachedMatches.size() && i < 6; ++i) {
+    float yPos = 140;
+    
+    // Calculate which groups to show on current page
+    int startIndex = currentMatchPage * groupsPerPage;
+    int endIndex = std::min(startIndex + groupsPerPage, (int)cachedMatches.size());
+    
+    // Display page info
+    if (cachedMatches.size() > groupsPerPage) {
+        int totalPages = (cachedMatches.size() + groupsPerPage - 1) / groupsPerPage;
+        
+        sf::Text pageInfo;
+        pageInfo.setFont(font);
+        pageInfo.setString("Page " + std::to_string(currentMatchPage + 1) + " of " + 
+                          std::to_string(totalPages) + " (" + 
+                          std::to_string(cachedMatches.size()) + " total matches)");
+        pageInfo.setCharacterSize(14);
+        pageInfo.setFillColor(sf::Color(160, 160, 160));
+        pageInfo.setPosition(100, 110);
+        window.draw(pageInfo);
+    }
+    
+    // Render groups for current page
+    for (int i = startIndex; i < endIndex; ++i) {
         const auto& group = cachedMatches[i];
-        std::cout << "Rendering group " << (i+1) << ": " << group.name << " at yPos=" << yPos << std::endl;
-
+        
         // Create a card-like background for each group
         sf::RectangleShape groupCard(sf::Vector2f(800, 70));
         groupCard.setPosition(100, yPos);
-        groupCard.setFillColor(sf::Color(30, 41, 59)); // Darker card background
+        groupCard.setFillColor(sf::Color(30, 41, 59));
         groupCard.setOutlineThickness(1);
         groupCard.setOutlineColor(sf::Color(51, 65, 85));
         window.draw(groupCard);
@@ -1010,31 +1065,30 @@ void Application::renderGroupMatches() {
         locationText.setPosition(120, yPos + 52);
         window.draw(locationText);
         
-		// Join button - make it wider
-		sf::RectangleShape joinButton(sf::Vector2f(120, 30));  // Changed from 80 to 120
-		joinButton.setPosition(710, yPos + 20);  // Moved left to fit (was 750)
-		joinButton.setFillColor(sf::Color(168, 85, 247)); // Purple color
-		window.draw(joinButton);
+        // Join button
+        sf::RectangleShape joinButton(sf::Vector2f(120, 30));
+        joinButton.setPosition(710, yPos + 20);
+        joinButton.setFillColor(sf::Color(168, 85, 247));
+        window.draw(joinButton);
 
-		sf::Text joinButtonText;
-		joinButtonText.setFont(font);
-		joinButtonText.setString("See Information");
-		joinButtonText.setCharacterSize(11);  // Slightly smaller font
-		joinButtonText.setFillColor(sf::Color::White);
-		joinButtonText.setStyle(sf::Text::Bold);
+        sf::Text joinButtonText;
+        joinButtonText.setFont(font);
+        joinButtonText.setString("See Information");
+        joinButtonText.setCharacterSize(11);
+        joinButtonText.setFillColor(sf::Color::White);
+        joinButtonText.setStyle(sf::Text::Bold);
 
-		// Center the text in the wider button
-		sf::FloatRect textBounds = joinButtonText.getLocalBounds();
-		joinButtonText.setPosition(
-			710 + (120 - textBounds.width) / 2.0f,  // Center in 120px button
-			yPos + 20 + (30 - textBounds.height) / 2.0f
-		);
-		
-		window.draw(joinButtonText);
-		yPos += 80;	
+        sf::FloatRect textBounds = joinButtonText.getLocalBounds();
+        joinButtonText.setPosition(
+            710 + (120 - textBounds.width) / 2.0f,
+            yPos + 20 + (30 - textBounds.height) / 2.0f
+        );
+        window.draw(joinButtonText);
+        
+        yPos += 80; // Move to next row
     }
     
-	if (cachedMatches.empty()) {
+    if (cachedMatches.empty()) {
         sf::Text noMatches;
         noMatches.setFont(font);
         noMatches.setString("No matching study groups found yet.\nTry updating your classes in your profile!");
@@ -1043,5 +1097,4 @@ void Application::renderGroupMatches() {
         centerText(noMatches, 300);
         window.draw(noMatches);
     }
-	
 }
