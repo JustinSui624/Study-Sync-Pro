@@ -41,7 +41,7 @@ void Application::initializeDatabase() {
         PgConnector db(connStr);
         
         // Try to get groups from your actual database
-        PGresult* res = db.exec("SELECT group_name, description FROM groups");
+        PGresult* res = db.exec("SELECT group_name, description, contact FROM groups");
         int groupCount = PQntuples(res);
         
         std::cout << "Database connected! Found " << groupCount << " groups in database" << std::endl;
@@ -51,6 +51,7 @@ void Application::initializeDatabase() {
             Group group;
             group.name = PQgetvalue(res, i, 0);
             group.description = PQgetvalue(res, i, 1) ? PQgetvalue(res, i, 1) : "";
+			group.contactCell = PQgetvalue(res, i, 2) ? PQgetvalue(res, i, 2) : "No contact available";  // contact
             group.subjects = group.name; // Use group name for subject matching
             group.location = "Various Locations";
             group.memberCount = 5 + (i % 10); // Mock member count
