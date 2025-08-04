@@ -1,8 +1,10 @@
 #include "TextBox.h"
 #include <iostream>
 
-TextBox::TextBox(float x, float y, float width, float height, const std::string& labelText, sf::Font& font)
-{
+TextBox::TextBox(float x, float y, float width, float height, const std::string& label, sf::Font& font, bool password)
+    : position(x, y), size(width, height), labelText(label), font(font), 
+      isActive(false), isPassword(password) {  // Remove the extra {
+    
     // Setup the box
     this->box.setSize(sf::Vector2f(width, height));
     this->box.setPosition(x, y);
@@ -25,9 +27,7 @@ TextBox::TextBox(float x, float y, float width, float height, const std::string&
         
     this->isActive = false;
     this->showCursor = true;
-    this->isPassword = false;  // Initialize password mode to false
     this->content = "";
-    this->displayContent = "";  // Initialize display content
 }
 
 void TextBox::handleEvent(const sf::Event& event) {
@@ -71,16 +71,21 @@ void TextBox::update() {
 }
 
 void TextBox::updateDisplayText() {
+    std::string displayText;
+    
     if (isPassword && !content.empty()) {
-        displayContent = std::string(content.length(), '*');
+        // Show asterisks for password
+        displayText = std::string(content.length(), '*');
     } else {
-        displayContent = content;
+        // Show normal text
+        displayText = content;
     }
     
-    std::string displayText = displayContent;
+    // Add cursor if active
     if (this->isActive && this->showCursor) {
         displayText += "|";
     }
+    
     this->text.setString(displayText);
 }
 
@@ -101,10 +106,5 @@ void TextBox::setActive(bool active) {
 
 void TextBox::setContent(const std::string& content) {
     this->content = content;
-    updateDisplayText();
-}
-
-void TextBox::setPasswordMode(bool passwordMode) {
-    this->isPassword = passwordMode;
     updateDisplayText();
 }
