@@ -48,7 +48,8 @@ struct Group {
 class Application {
 private:
 	std::vector<Group> cachedMatches;
-
+    int currentMatchPage;
+    int groupsPerPage;
 	std::string selectedGroupName;  
     sf::RenderWindow window;
     sf::Font font;
