@@ -77,6 +77,10 @@ public:
         scrollBar.setOutlineThickness(0);
     }
 
+    bool isDropdownOpen() const {
+        return isOpen;
+    }
+	
     void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         
