@@ -595,17 +595,74 @@ void Application::handleRegistrationButtons(size_t buttonIndex) {
             return;
         }
         
-        // Set current user and login
-        currentUser.name = name;
-        currentUser.username = username;
-        currentUser.subjects = currentClasses;
-        currentUser.gradYear = gradYear;
-        currentUser.profileId = 1;
-        
-        isLoggedIn = true;
-        currentPage = PageType::PROFILE;
-        setupCurrentPage();
-        std::cout << "User registered successfully: " << username << std::endl;
+        // Try to register in database
+        try {
+            std::string connStr = "postgresql://postgres:cen3031group4@db.iekosjtwireodvbaqhcm.supabase.co:5432/postgres";
+            PgConnector db(connStr);
+            
+            PGresult* beginRes = db.exec("BEGIN");
+            PQclear(beginRes);
+            
+            // Check if username already exists
+            std::vector<const char*> checkParams = {username.c_str()};
+            PGresult* checkRes = db.execParams("SELECT username FROM user_login WHERE username = $1", checkParams);
+            
+            if (PQntuples(checkRes) > 0) {
+                PQclear(checkRes);
+                PGresult* rollbackRes = db.exec("ROLLBACK");
+                PQclear(rollbackRes);
+                messageText.setString("Username already exists!");
+                return;
+            }
+            PQclear(checkRes);
+            
+            // Insert into profile table
+            std::vector<const char*> profileParams = {name.c_str(), std::to_string(gradYear).c_str(), currentClasses.c_str()};
+            PGresult* profileRes = db.execParams(
+                "INSERT INTO profile (name, grad_year, current_classes) VALUES ($1, $2, $3) RETURNING id",
+                profileParams
+            );
+            
+            if (PQntuples(profileRes) == 0) {
+                PQclear(profileRes);
+                PGresult* rollbackRes = db.exec("ROLLBACK");
+                PQclear(rollbackRes);
+                messageText.setString("Failed to create profile!");
+                return;
+            }
+            
+            std::string profileId = PQgetvalue(profileRes, 0, 0);
+            PQclear(profileRes);
+            
+            // Insert into user_login
+            std::vector<const char*> loginParams = {username.c_str(), password.c_str(), profileId.c_str()};
+            PGresult* loginRes = db.execParams(
+                "INSERT INTO user_login (username, password_hash, profile_id) VALUES ($1, $2, $3)",
+                loginParams
+            );
+            PQclear(loginRes);
+            
+            PGresult* commitRes = db.exec("COMMIT");
+            PQclear(commitRes);
+            
+            // Set current user and login
+            currentUser.name = name;
+            currentUser.username = username;
+            currentUser.subjects = currentClasses;
+            currentUser.gradYear = gradYear;
+            currentUser.profileId = std::stoi(profileId);
+            
+            isLoggedIn = true;
+            currentPage = PageType::PROFILE;
+            setupCurrentPage();
+            std::cout << "✅ User registered successfully in database: " << username << std::endl;
+            return;
+            
+        } catch (const std::exception& e) {
+            std::cout << "Database registration failed: " << e.what() << std::endl;
+            messageText.setString("Registration failed! Try again.");
+            return;
+        }
         
     } else if (buttonIndex == 1) { // Back
         currentPage = PageType::LOGIN;
